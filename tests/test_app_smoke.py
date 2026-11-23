@@ -47,6 +47,30 @@ def test_swings_and_fvg_overlays_run_together(timeframe: str) -> None:
     assert not app.exception
 
 
+@pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])
+def test_structure_overlay_runs_for_each_timeframe(timeframe: str) -> None:
+    app = load_app()
+    app.selectbox[0].select(timeframe).run()
+    assert not app.exception
+
+    checkbox(app, "Show structure breaks").set_value(True)
+    app.run()
+    assert not app.exception
+
+
+@pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])
+def test_all_three_overlays_run_together(timeframe: str) -> None:
+    app = load_app()
+    app.selectbox[0].select(timeframe).run()
+    assert not app.exception
+
+    checkbox(app, "Show swing highs/lows").set_value(True)
+    checkbox(app, "Show fair value gaps").set_value(True)
+    checkbox(app, "Show structure breaks").set_value(True)
+    app.run()
+    assert not app.exception
+
+
 def test_single_date_and_no_data_ranges() -> None:
     app = load_app()
     date_picker = app.date_input[0]

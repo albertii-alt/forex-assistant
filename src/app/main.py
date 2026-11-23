@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.data.loader import load_candles
 from src.data.resample import resample_ohlcv
 from src.detectors.fvg import detect_fvgs
+from src.detectors.structure import detect_structure_breaks
 from src.detectors.swings import detect_swings
 
 
@@ -50,6 +51,16 @@ def cached_detect_fvgs(df: pd.DataFrame, min_gap: float) -> pd.DataFrame:
     return detect_fvgs(df, min_gap=min_gap)
 
 
+@st.cache_data
+def cached_detect_structure_breaks(
+    df: pd.DataFrame,
+    left: int,
+    right: int,
+) -> pd.DataFrame:
+    """Cache structure-break detection for the full resampled dataset."""
+    return detect_structure_breaks(df, left=left, right=right)
+
+
 def weekend_rangebreaks(df: pd.DataFrame) -> list[dict]:
     """Build exact rangebreaks around gaps of at least two days."""
     if len(df) < 2:
@@ -80,22 +91,31 @@ show_swings = st.sidebar.checkbox(
     value=False,
     key="show_swings",
 )
-left = st.sidebar.number_input(
-    "Left candles",
-    min_value=1,
-    max_value=20,
-    value=5,
-    step=1,
-    key="left_candles",
+show_structure = st.sidebar.checkbox(
+    "Show structure breaks",
+    value=False,
+    key="show_structure",
 )
-right = st.sidebar.number_input(
-    "Right candles",
-    min_value=1,
-    max_value=20,
-    value=5,
-    step=1,
-    key="right_candles",
-)
+if show_swings or show_structure:
+    left = st.sidebar.number_input(
+        "Left candles",
+        min_value=1,
+        max_value=20,
+        value=5,
+        step=1,
+        key="left_candles",
+    )
+    right = st.sidebar.number_input(
+        "Right candles",
+        min_value=1,
+        max_value=20,
+        value=5,
+        step=1,
+        key="right_candles",
+    )
+else:
+    left = 5
+    right = 5
 show_fvgs = st.sidebar.checkbox(
     "Show fair value gaps",
     value=False,
@@ -346,6 +366,71 @@ if show_fvgs:
             )
         )
 
+if show_structure:
+    full_resampled = cached_resample_ohlcv(candles, timeframe)
+    breaks = cached_detect_structure_breaks(
+        full_resampled,
+        left=int(left),
+        right=int(right),
+    )
+    first_displayed = resampled.index.min()
+    last_displayed = resampled.index.max()
+    visible_breaks = breaks.loc[
+        breaks["broke_at"].between(first_displayed, last_displayed)
+    ].copy()
+
+    if len(visible_breaks) > 150:
+        visible_breaks = visible_breaks.iloc[-150:]
+        st.warning(
+            "More than 150 structure breaks match this view. "
+            "Showing only the 150 most recent."
+        )
+
+    marker_x = []
+    marker_y = []
+    marker_colors = []
+    marker_hover = []
+
+    for _, break_row in visible_breaks.iterrows():
+        start_time = max(break_row["swing_time"], first_displayed)
+        direction = break_row["direction"]
+        line_color = "green" if direction == "bullish" else "red"
+        dash = "dash" if break_row["kind"] == "reversal" else "solid"
+        figure.add_shape(
+            type="line",
+            x0=start_time,
+            x1=break_row["broke_at"],
+            y0=float(break_row["level"]),
+            y1=float(break_row["level"]),
+            line={"color": line_color, "width": 1.5, "dash": dash},
+            layer="above",
+        )
+        marker_x.append(break_row["broke_at"])
+        marker_y.append(float(break_row["level"]))
+        marker_colors.append(line_color)
+        marker_hover.append(
+            f"Direction: {direction}<br>"
+            f"Kind: {break_row['kind']}<br>"
+            f"Level: {break_row['level']:.5f}<br>"
+            f"Swing time: {break_row['swing_time'].strftime('%Y-%m-%d %H:%M UTC')}<br>"
+            f"Swing confirmed: {break_row['swing_confirmed_at'].strftime('%Y-%m-%d %H:%M UTC')}<br>"
+            f"Broke at: {break_row['broke_at'].strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+
+    if len(visible_breaks):
+        figure.add_trace(
+            go.Scatter(
+                x=marker_x,
+                y=marker_y,
+                mode="markers",
+                marker={"symbol": "circle", "size": 7, "color": marker_colors},
+                hovertext=marker_hover,
+                hovertemplate="%{hovertext}<extra></extra>",
+                showlegend=False,
+                name="Structure breaks",
+            )
+        )
+
 figure.update_layout(
     xaxis_rangeslider_visible=False,
     xaxis={"rangebreaks": weekend_rangebreaks(resampled)},
@@ -367,4 +452,8 @@ if show_fvgs:
     st.caption("A gap is only known after its third candle closes.")
     st.caption(
         "Min gap uses 0.0001 price units per pip, assuming a 4-decimal pair like EUR/USD."
+    )
+if show_structure:
+    st.caption(
+        "A break needs a candle CLOSE beyond a swing that has already been confirmed."
     )

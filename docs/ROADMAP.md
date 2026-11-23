@@ -11,8 +11,8 @@ Work in order. Do not start a phase until the owner assigns it.
   resampling function.
 - Phase 3: Pattern detectors (IN PROGRESS)
   - swings (DONE)
-  - fair value gaps (this task)
-  - structure breaks
+  - fair value gaps (DONE)
+  - structure breaks (DONE)
   - liquidity sweeps
 - Phase 4: Finalize exact rules in `docs/strategy_rules.md`. The owner
   approves definitions BEFORE any strategy code is written.

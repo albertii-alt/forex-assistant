@@ -16,8 +16,9 @@ Work in order. Do not start a phase until the owner assigns it.
   - liquidity sweeps (DONE)
   - remaining, undecided: equal highs/lows, session levels, inverse FVG,
     equilibrium, daily bias
-- Phase 4: Finalize exact rules in `docs/strategy_rules.md`. The owner
-  approves definitions BEFORE any strategy code is written.
+- Phase 4: IN PROGRESS
+  - Strategy rules v0.3 approved.
+  - Groundwork step 1 (10-year data and development/holdout split): DONE.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
 - Phase 6: Risk module (position sizing, daily loss limit, max trades per

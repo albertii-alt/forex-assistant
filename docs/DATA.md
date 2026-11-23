@@ -20,6 +20,17 @@
 - Volume is not true market-wide volume in spot forex. Do not build logic
   that depends on it.
 
+## 10-year research dataset
+- File: `data/EURUSD_M15_bid_10y.parquet` (not tracked by Git)
+- Rows: 249,368 candles, from 2016-11-01 00:00 UTC to 2026-10-30 20:45 UTC.
+- Download range starts 2016-11-01 UTC and ends exclusively at 2026-11-01 UTC.
+- The development set contains timestamps before 2024-11-01 00:00 UTC. The
+  sealed holdout contains timestamps at or after that boundary. Only use the
+  holdout for one final evaluation of a candidate that has already passed on
+  the development set, as specified in `docs/strategy_rules.md`.
+- The older 3-year file remains in use by the viewer until it is explicitly
+  switched to the 10-year dataset.
+
 ## Known characteristics
 - No candles on weekends (the market closes Friday evening and reopens
   Sunday evening UTC), so there are time gaps. Do not treat them as errors

@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.data.loader import load_candles
 from src.data.resample import resample_ohlcv
+from src.detectors.swings import detect_swings
 
 
 MAX_CANDLES = 5_000
@@ -24,6 +25,22 @@ MAX_CANDLES = 5_000
 def cached_load_candles() -> pd.DataFrame:
     """Load and validate candles once per Streamlit process."""
     return load_candles()
+
+
+@st.cache_data
+def cached_resample_ohlcv(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """Resample the full dataset once for the selected timeframe."""
+    return resample_ohlcv(df, timeframe)
+
+
+@st.cache_data
+def cached_detect_swings(
+    df: pd.DataFrame,
+    left: int,
+    right: int,
+) -> pd.DataFrame:
+    """Cache swing detection for the full resampled dataset."""
+    return detect_swings(df, left=left, right=right)
 
 
 def weekend_rangebreaks(df: pd.DataFrame) -> list[dict]:
@@ -47,6 +64,21 @@ st.set_page_config(page_title="Forex Assistant", layout="wide")
 st.sidebar.title("Chart controls")
 
 timeframe = st.sidebar.selectbox("Timeframe", ("15m", "1h", "4h", "1D"))
+show_swings = st.sidebar.checkbox("Show swing highs/lows", value=False)
+left = st.sidebar.number_input(
+    "Left candles",
+    min_value=1,
+    max_value=20,
+    value=5,
+    step=1,
+)
+right = st.sidebar.number_input(
+    "Right candles",
+    min_value=1,
+    max_value=20,
+    value=5,
+    step=1,
+)
 
 try:
     candles = cached_load_candles()
@@ -126,6 +158,67 @@ figure = go.Figure(
         )
     ]
 )
+
+if show_swings:
+    full_resampled = cached_resample_ohlcv(candles, timeframe)
+    swings = cached_detect_swings(
+        full_resampled,
+        left=int(left),
+        right=int(right),
+    )
+    visible_swings = swings.reindex(resampled.index)
+
+    high_mask = visible_swings["is_swing_high"].fillna(False)
+    low_mask = visible_swings["is_swing_low"].fillna(False)
+    high_indexes = resampled.index[high_mask.to_numpy()]
+    low_indexes = resampled.index[low_mask.to_numpy()]
+
+    if len(high_indexes):
+        high_confirmed = visible_swings.loc[high_indexes, "confirmed_at"]
+        high_hover = [
+            (
+                f"Swing high: {resampled.loc[index, 'high']:.5f}<br>"
+                f"Confirmed: {confirmed.strftime('%Y-%m-%d %H:%M UTC')}"
+                if pd.notna(confirmed)
+                else f"Swing high: {resampled.loc[index, 'high']:.5f}"
+            )
+            for index, confirmed in high_confirmed.items()
+        ]
+        figure.add_trace(
+            go.Scatter(
+                x=high_indexes,
+                y=resampled.loc[high_indexes, "high"],
+                mode="markers",
+                marker={"symbol": "triangle-down", "size": 10, "color": "red"},
+                name="Swing highs",
+                hovertext=high_hover,
+                hovertemplate="%{hovertext}<extra></extra>",
+            )
+        )
+
+    if len(low_indexes):
+        low_confirmed = visible_swings.loc[low_indexes, "confirmed_at"]
+        low_hover = [
+            (
+                f"Swing low: {resampled.loc[index, 'low']:.5f}<br>"
+                f"Confirmed: {confirmed.strftime('%Y-%m-%d %H:%M UTC')}"
+                if pd.notna(confirmed)
+                else f"Swing low: {resampled.loc[index, 'low']:.5f}"
+            )
+            for index, confirmed in low_confirmed.items()
+        ]
+        figure.add_trace(
+            go.Scatter(
+                x=low_indexes,
+                y=resampled.loc[low_indexes, "low"],
+                mode="markers",
+                marker={"symbol": "triangle-up", "size": 10, "color": "green"},
+                name="Swing lows",
+                hovertext=low_hover,
+                hovertemplate="%{hovertext}<extra></extra>",
+            )
+        )
+
 figure.update_layout(
     xaxis_rangeslider_visible=False,
     xaxis={"rangebreaks": weekend_rangebreaks(resampled)},
@@ -141,3 +234,5 @@ st.write(
     f"| Candle count: {len(resampled)}"
 )
 st.caption("Bid prices, UTC time.")
+if show_swings:
+    st.caption("Swings are only confirmed `right` candles after they form.")

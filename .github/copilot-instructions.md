@@ -56,3 +56,8 @@ next task is assigned.
 - Test output and command output in reports must be copied verbatim from a
   real run. Never retype, reconstruct, or merge output from earlier runs. If
   you could not run something, say so.
+
+  - Holdout protection: any real-data test, report, or script must apply
+  development_set() first. The full file may be used ONLY by the data quality
+  report. Never compute returns, performance statistics, or strategy results on
+  holdout_set().

@@ -156,3 +156,9 @@ accepted result.
   before any backtest or result existed. Added the SLC blueprint as a source
   (stochastic 5,3,3 and market-order entry taken from it). Slippage now also
   applies to market entries.
+  - Protocol log (2026-11-23): during groundwork step 2, structural checks
+  (candle counts, bin alignment, volume totals) briefly ran over the full file
+  including the holdout period. No returns or performance statistics were
+  computed. Corrected so real-data tests use development_set() only. The data
+  quality report (counts, gaps, largest candle ranges) also describes the whole
+  file by design.

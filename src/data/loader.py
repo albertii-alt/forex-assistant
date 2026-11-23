@@ -52,3 +52,8 @@ def load_candles(path: str | Path | None = None) -> pd.DataFrame:
         )
 
     return df.loc[:, list(REQUIRED_COLUMNS)].copy()
+
+
+def load_candles_10y() -> pd.DataFrame:
+    """Load and validate the 10-year EUR/USD 15-minute BID candle file."""
+    return load_candles(PROJECT_ROOT / "data" / "EURUSD_M15_bid_10y.parquet")

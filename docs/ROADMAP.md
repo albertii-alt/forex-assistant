@@ -14,11 +14,14 @@ Work in order. Do not start a phase until the owner assigns it.
   - fair value gaps (DONE)
   - structure breaks (DONE)
   - liquidity sweeps (DONE)
-  - remaining, undecided: equal highs/lows, session levels, inverse FVG,
-    equilibrium, daily bias
+  - session levels (basic previous-day and overnight levels): DONE
+  - remaining, undecided: equal highs/lows, inverse FVG, equilibrium,
+    daily bias
 - Phase 4: IN PROGRESS
   - Strategy rules v0.3 approved.
   - Groundwork step 1 (10-year data and development/holdout split): DONE.
+  - Groundwork step 2 (ET-aligned resampling, higher-timeframe alignment,
+    session levels): DONE.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
 - Phase 6: Risk module (position sizing, daily loss limit, max trades per

@@ -35,6 +35,17 @@ candle that trades beyond the level consumes it. If it closes back inside,
 it emits a sweep; if it closes beyond the level, it emits no sweep.
 Daily keys are UTC-based, and Sunday UTC candles are merged into Monday.
 
+## Strategy session levels
+
+`detect_session_levels()` returns one row per ET trading date. Previous-day
+highs and lows use the preceding trading date that has data, with the first
+candle of the current date recorded as `prev_day_known_at`. The overnight
+range covers 17:00 ET through, but not including, 09:30 ET; its levels are
+known at the first 09:30-or-later candle before the 17:00 ET rollover.
+Set-at fields identify the first candle attaining each extreme. If either
+the overnight range or its confirming morning candle is absent, its level,
+set-at time, and known-at time are null.
+
 ## Timing rule
 
 All timestamps are candle OPEN times. A fact confirmed at a candle close is

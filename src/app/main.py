@@ -1,7 +1,7 @@
 """Streamlit chart viewer for the EUR/USD BID candle data."""
 
 import sys
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from pathlib import Path
 
 import pandas as pd
@@ -15,7 +15,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.data.loader import load_candles
 from src.data.resample import resample_ohlcv
+from src.app.rangebreaks import weekend_rangebreaks
 from src.detectors.fvg import detect_fvgs
+from src.detectors.sweeps import detect_liquidity_sweeps
 from src.detectors.structure import detect_structure_breaks
 from src.detectors.swings import detect_swings
 
@@ -61,21 +63,24 @@ def cached_detect_structure_breaks(
     return detect_structure_breaks(df, left=left, right=right)
 
 
-def weekend_rangebreaks(df: pd.DataFrame) -> list[dict]:
-    """Build exact rangebreaks around gaps of at least two days."""
-    if len(df) < 2:
-        return []
-
-    breaks = []
-    timestamps = df.index
-    for previous, following in zip(timestamps[:-1], timestamps[1:]):
-        if following - previous >= timedelta(days=2):
-            breaks.append(
-                {
-                    "bounds": [previous.isoformat(), following.isoformat()],
-                }
-            )
-    return breaks
+@st.cache_data
+def cached_detect_liquidity_sweeps(
+    df: pd.DataFrame,
+    left: int,
+    right: int,
+    max_age: int | None,
+    use_swings: bool,
+    use_prev_day: bool,
+) -> pd.DataFrame:
+    """Cache liquidity-sweep detection for the full resampled dataset."""
+    return detect_liquidity_sweeps(
+        df,
+        left=left,
+        right=right,
+        max_age=max_age,
+        use_swings=use_swings,
+        use_prev_day=use_prev_day,
+    )
 
 
 st.set_page_config(page_title="Forex Assistant", layout="wide")
@@ -96,7 +101,36 @@ show_structure = st.sidebar.checkbox(
     value=False,
     key="show_structure",
 )
-if show_swings or show_structure:
+show_sweeps = st.sidebar.checkbox(
+    "Show liquidity sweeps",
+    value=False,
+    key="show_sweeps",
+)
+if show_sweeps:
+    use_swing_levels = st.sidebar.checkbox(
+        "Swing levels",
+        value=True,
+        key="use_swing_levels",
+    )
+    use_prev_day_levels = st.sidebar.checkbox(
+        "Previous-day levels",
+        value=True,
+        key="use_prev_day_levels",
+    )
+    max_age_input = st.sidebar.number_input(
+        "Max level age (candles, 0 = unlimited)",
+        min_value=0,
+        max_value=2000,
+        value=0,
+        step=1,
+        key="max_level_age",
+    )
+else:
+    use_swing_levels = True
+    use_prev_day_levels = True
+    max_age_input = 0
+
+if show_swings or show_structure or show_sweeps:
     left = st.sidebar.number_input(
         "Left candles",
         min_value=1,
@@ -431,9 +465,84 @@ if show_structure:
             )
         )
 
+if show_sweeps:
+    full_resampled = cached_resample_ohlcv(candles, timeframe)
+    max_age = None if int(max_age_input) == 0 else int(max_age_input)
+    sweeps = cached_detect_liquidity_sweeps(
+        full_resampled,
+        left=int(left),
+        right=int(right),
+        max_age=max_age,
+        use_swings=bool(use_swing_levels),
+        use_prev_day=bool(use_prev_day_levels),
+    )
+    first_displayed = resampled.index.min()
+    last_displayed = resampled.index.max()
+    visible_sweeps = sweeps.loc[
+        sweeps["swept_at"].between(first_displayed, last_displayed)
+    ].copy()
+
+    if len(visible_sweeps) > 150:
+        visible_sweeps = visible_sweeps.iloc[-150:]
+        st.warning(
+            "More than 150 liquidity sweeps match this view. "
+            "Showing only the 150 most recent."
+        )
+
+    marker_x = []
+    marker_y = []
+    marker_colors = []
+    marker_hover = []
+
+    for _, sweep in visible_sweeps.iterrows():
+        start_time = max(sweep["level_known_at"], first_displayed)
+        line_color = "orange" if sweep["side"] == "high" else "blue"
+        line_dash = "dot" if sweep["source"] == "swing" else "dash"
+        line_width = 1 if sweep["source"] == "swing" else 1.5
+        figure.add_shape(
+            type="line",
+            x0=start_time,
+            x1=sweep["swept_at"],
+            y0=float(sweep["level"]),
+            y1=float(sweep["level"]),
+            line={
+                "color": line_color,
+                "width": line_width,
+                "dash": line_dash,
+            },
+            layer="above",
+        )
+        marker_x.append(sweep["swept_at"])
+        marker_y.append(float(sweep["extreme"]))
+        marker_colors.append(line_color)
+        marker_hover.append(
+            f"Source: {sweep['source']}<br>"
+            f"Side: {sweep['side']}<br>"
+            f"Level: {sweep['level']:.5f}<br>"
+            f"Level known: {sweep['level_known_at'].strftime('%Y-%m-%d %H:%M UTC')}<br>"
+            f"Swept at: {sweep['swept_at'].strftime('%Y-%m-%d %H:%M UTC')}<br>"
+            f"Extreme: {sweep['extreme']:.5f}<br>"
+            f"Close: {sweep['close']:.5f}<br>"
+            f"Depth: {sweep['depth'] / 0.0001:.1f} pips"
+        )
+
+    if len(visible_sweeps):
+        figure.add_trace(
+            go.Scatter(
+                x=marker_x,
+                y=marker_y,
+                mode="markers",
+                marker={"symbol": "circle", "size": 7, "color": marker_colors},
+                hovertext=marker_hover,
+                hovertemplate="%{hovertext}<extra></extra>",
+                showlegend=False,
+                name="Liquidity sweeps",
+            )
+        )
+
 figure.update_layout(
     xaxis_rangeslider_visible=False,
-    xaxis={"rangebreaks": weekend_rangebreaks(resampled)},
+    xaxis={"rangebreaks": weekend_rangebreaks(resampled.index, timeframe)},
     margin={"l": 20, "r": 20, "t": 20, "b": 20},
 )
 
@@ -456,4 +565,12 @@ if show_fvgs:
 if show_structure:
     st.caption(
         "A break needs a candle CLOSE beyond a swing that has already been confirmed."
+    )
+if show_sweeps:
+    st.caption(
+        "A sweep is a wick through a level that closes back inside it. "
+        "It is only known at the sweeping candle's close."
+    )
+    st.caption(
+        "Swing levels use dotted thin lines; previous-day levels use dashed wider lines."
     )

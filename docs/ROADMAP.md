@@ -13,7 +13,9 @@ Work in order. Do not start a phase until the owner assigns it.
   - swings (DONE)
   - fair value gaps (DONE)
   - structure breaks (DONE)
-  - liquidity sweeps
+  - liquidity sweeps (DONE)
+  - remaining, undecided: equal highs/lows, session levels, inverse FVG,
+    equilibrium, daily bias
 - Phase 4: Finalize exact rules in `docs/strategy_rules.md`. The owner
   approves definitions BEFORE any strategy code is written.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and

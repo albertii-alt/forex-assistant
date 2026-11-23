@@ -26,6 +26,15 @@ Wicks and equality do not break the level. A broken or superseded swing is
 abandoned and cannot break again. `broke_at` is the breaking candle's OPEN
 time.
 
+## Liquidity sweeps
+
+`detect_liquidity_sweeps()` tracks swing highs/lows and UTC previous-day
+extremes. A swing level is usable after its confirmation candle; a
+previous-day level is known at the end of the prior trading key. The first
+candle that trades beyond the level consumes it. If it closes back inside,
+it emits a sweep; if it closes beyond the level, it emits no sweep.
+Daily keys are UTC-based, and Sunday UTC candles are merged into Monday.
+
 ## Timing rule
 
 All timestamps are candle OPEN times. A fact confirmed at a candle close is

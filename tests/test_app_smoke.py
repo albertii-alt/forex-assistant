@@ -20,6 +20,12 @@ def checkbox(app: AppTest, label: str):
     return matches[0]
 
 
+def number_input(app: AppTest, label: str):
+    matches = [item for item in app.number_input if item.label == label]
+    assert len(matches) == 1
+    return matches[0]
+
+
 def test_app_default_settings_has_no_exception() -> None:
     load_app()
 
@@ -67,6 +73,42 @@ def test_all_three_overlays_run_together(timeframe: str) -> None:
     checkbox(app, "Show swing highs/lows").set_value(True)
     checkbox(app, "Show fair value gaps").set_value(True)
     checkbox(app, "Show structure breaks").set_value(True)
+    app.run()
+    assert not app.exception
+
+
+@pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])
+def test_sweeps_overlay_runs_for_each_timeframe(timeframe: str) -> None:
+    app = load_app()
+    app.selectbox[0].select(timeframe).run()
+    assert not app.exception
+
+    checkbox(app, "Show liquidity sweeps").set_value(True)
+    app.run()
+    assert not app.exception
+
+
+@pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])
+def test_sweep_source_variants_and_all_overlays(timeframe: str) -> None:
+    app = load_app()
+    app.selectbox[0].select(timeframe).run()
+    checkbox(app, "Show liquidity sweeps").set_value(True)
+    app.run()
+    assert not app.exception
+    checkbox(app, "Swing levels").set_value(False)
+    app.run()
+    assert not app.exception
+
+    checkbox(app, "Swing levels").set_value(True)
+    checkbox(app, "Previous-day levels").set_value(False)
+    app.run()
+    assert not app.exception
+
+    checkbox(app, "Previous-day levels").set_value(True)
+    checkbox(app, "Show swing highs/lows").set_value(True)
+    checkbox(app, "Show fair value gaps").set_value(True)
+    checkbox(app, "Show structure breaks").set_value(True)
+    number_input(app, "Max level age (candles, 0 = unlimited)").set_value(50)
     app.run()
     assert not app.exception
 

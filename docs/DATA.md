@@ -1,5 +1,15 @@
 # Data Notes
 
+## Timestamp convention
+
+- Candle timestamps are candle OPEN times. A candle stamped `T` closes at
+  `T` plus the timeframe length, and its OHLC values are only knowable after
+  that close.
+- Anything known at candle `T`'s close cannot be acted on before the NEXT
+  candle's open.
+- Detector columns ending in `_at` or named `formed_at` use the OPEN time of
+  the candle whose close made the fact knowable.
+
 ## Current dataset
 - File: `data/EURUSD_M15_bid.parquet` (not tracked by Git)
 - Rows: 74,689 candles, from 2023-11-01 00:00 UTC to 2026-10-30 20:45 UTC

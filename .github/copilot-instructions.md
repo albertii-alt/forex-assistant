@@ -28,6 +28,10 @@ next task is assigned.
   information available at the close of candle N. If a pattern needs future
   candles to confirm, it must be labeled as confirmed at the later candle,
   not at the earlier one.
+- Candle timestamps represent OPEN times. A fact or pattern known only after
+  candle `T` closes must be stamped with candle `T`'s OPEN time in any
+  `*_at` or `formed_at` field and cannot be acted on before the next candle's
+  open.
 - Every detector or calculation gets pytest tests using small hand-made
   examples with known correct answers. Run the tests and show the output.
 - The `dukascopy-python` library changes its API often. Only

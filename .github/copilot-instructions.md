@@ -52,3 +52,7 @@ next task is assigned.
 6. Deviations from the request, and why
 7. Problems or open questions
 8. Suggested next step (do NOT implement it)
+
+- Test output and command output in reports must be copied verbatim from a
+  real run. Never retype, reconstruct, or merge output from earlier runs. If
+  you could not run something, say so.

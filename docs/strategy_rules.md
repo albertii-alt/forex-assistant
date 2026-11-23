@@ -162,3 +162,10 @@ accepted result.
   computed. Corrected so real-data tests use development_set() only. The data
   quality report (counts, gaps, largest candle ranges) also describes the whole
   file by design.
+
+  - Clarification (2026-11-23, before any results): in the backtest engine a
+  long limit order fills when the ASK reaches the limit (bid low + 1 pip <=
+  limit), consistent with "longs enter at ask"; a short limit fills when the
+  bid high >= limit. Candidate A rule 6 (cancel if a candle closes below the
+  sweep low) can never trigger before a fill, because price must trade
+  through the limit first; a failed setup simply fills and stops out.

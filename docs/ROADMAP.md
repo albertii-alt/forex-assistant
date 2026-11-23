@@ -22,6 +22,7 @@ Work in order. Do not start a phase until the owner assigns it.
   - Groundwork step 1 (10-year data and development/holdout split): DONE.
   - Groundwork step 2 (ET-aligned resampling, higher-timeframe alignment,
     session levels): DONE.
+  - Groundwork step 3 (cost-aware backtest engine and trade metrics): DONE.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
 - Phase 6: Risk module (position sizing, daily loss limit, max trades per

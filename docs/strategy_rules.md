@@ -247,3 +247,9 @@ accepted result.
   then the most recent base_time. (10) Known property: a zone can be created
   even if a candle closed beyond it between its base and its qualifying
   candle, because closed_through_at only looks at candles after known_at.
+
+  - Candidate B result (2026-11-23): the count gate was NOT MET. The finder
+  produced 107 plans (53 long, 54 short) on development data against the
+  pre-registered minimum of 130. Candidate B is INCONCLUSIVE and is dropped.
+  No Candidate B backtest was run and no returns were seen. The sealed holdout
+  was never used for either candidate. No settings were loosened.

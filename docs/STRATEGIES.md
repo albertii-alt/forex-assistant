@@ -25,3 +25,34 @@ Candidate A detector frames are expected in detector order, with break and
 FVG rows ordered by detector time. For an injected unsorted break frame,
 equal positions keep their relative row order and the earliest valid position
 is used. This fallback does not change detector-produced frames.
+
+## Candidate B plan generation
+
+`find_candidate_b_plans(df)` implements the fixed B-2R setup rules in
+`docs/strategy_rules.md` v0.3. It returns plans only; it does not simulate
+fills or establish profitability. Candidate B uses 15-minute BID candles,
+15-minute supply/demand zones, the slow stochastic %K, and the 4-hour trend
+state aligned only after each 4-hour candle closes.
+
+For each zone, the finder considers only the first post-known, pre-expiry
+touch. It then considers only the first %K crossing back inside the relevant
+80/20 extreme in the confirmation window. A crossing rejected by the closed
+through, trend, entry-time, or cost-adjusted risk filters does not cause a
+later touch or crossing to be tried. The trend must be down for a supply-zone
+short or up for a demand-zone long at the confirmation candle.
+
+The market order starts at the next candle's open. Its ET entry window is
+09:30 through 11:45 inclusive. Risk includes the engine's entry-cost model:
+shorts fill at BID open less 0.2 pip slippage; longs fill at BID open plus
+1.0 pip spread and 0.2 pip slippage. Stops are 2 pips beyond the zone's far
+side, and only 5–30 pip cost-adjusted risk is accepted. The fixed target is
+2R, and the planned time exit is the open of the 15:45 ET candle. The finder
+selects at most one plan per ET calendar date: earliest entry first, then
+latest zone `known_at`, then latest `base_time`.
+
+All timestamps are normalized to nanoseconds internally. For the default
+trend calculation, a constant `volume` column is added only to an internal
+copy when the input has no volume; volume is needed by the shared ET resampler
+but does not affect trend state. For real-data plan counts, call
+`development_set(load_candles_10y())` before the finder. The holdout remains
+sealed until the pre-registered development gate is passed.

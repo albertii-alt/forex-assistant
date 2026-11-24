@@ -253,3 +253,22 @@ accepted result.
   pre-registered minimum of 130. Candidate B is INCONCLUSIVE and is dropped.
   No Candidate B backtest was run and no returns were seen. The sealed holdout
   was never used for either candidate. No settings were loosened.
+
+  - Round 2 selection rules (2026-11-23, before any new source was reviewed):
+  (1) Candidates A and B are dropped; no results were seen for either, and the
+  holdout (2024-11-01 onward) has never been used. (2) At most TWO new sources
+  are reviewed. One is chosen by the codability scorecard below, before any
+  plan counts are computed; never by claimed results. (3) The strategy must
+  trade across the whole day or at least several sessions, on a chart
+  timeframe of 15m, 30m, 1h or 4h (all resampled from our 15m data). Tick, 1m
+  and 5m strategies are excluded. (4) It must be EUR/USD or described as
+  pair-agnostic. Other pairs would need a new data download and a new
+  pre-registration. (5) Missing parameters are set to textbook defaults and
+  logged BEFORE counts are computed. No tuning afterwards. (6) Count gate: at
+  least 130 development plans (counts only, no backtest). If not met, the
+  candidate is INCONCLUSIVE and nothing is loosened. (7) The acceptance test,
+  cost model, and sealed holdout are unchanged. (8) Codability scorecard,
+  scored 0-2 per item: entry rule fully objective; stop rule fully objective;
+  target rule fully objective; no discretionary filter ("clean level",
+  "strong candle"); all indicator settings stated; trade frequency of at
+  least one setup per week. A source scoring below 9 of 12 is not used.

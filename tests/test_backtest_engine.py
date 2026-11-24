@@ -946,10 +946,10 @@ def independent_reference(
 def make_random_case(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(seed)
     index = make_index(3000, "2024-01-01 00:00")
-    opens = 1.1000 + np.cumsum(rng.normal(0.0, 0.000015, len(index)))
-    closes = opens + rng.normal(0.0, 0.000015, len(index))
-    upper_wicks = rng.uniform(0.000005, 0.00005, len(index))
-    lower_wicks = rng.uniform(0.000005, 0.00005, len(index))
+    opens = 1.1000 + np.cumsum(rng.normal(0.0, 0.00004, len(index)))
+    closes = opens + rng.normal(0.0, 0.00004, len(index))
+    upper_wicks = rng.uniform(0.00002, 0.00015, len(index))
+    lower_wicks = rng.uniform(0.00002, 0.00015, len(index))
     df = pd.DataFrame(
         {
             "open": opens,
@@ -959,43 +959,221 @@ def make_random_case(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
         },
         index=index,
     )
+
+    def set_candle(
+        position: int,
+        opening: float,
+        high: float,
+        low: float,
+        close: float,
+    ) -> None:
+        candle = (
+            opening,
+            max(high, opening, close),
+            min(low, opening, close),
+            close,
+        )
+        df.iloc[position] = candle
+
     plans = []
     start_pos = 2
     for number in range(120):
-        side = "long" if number % 2 == 0 else "short"
-        order_type = "market" if number % 3 else "limit"
         valid = int(rng.integers(1, 9))
-        risk_pips = int(rng.integers(3, 31))
-        offset_pips = float(rng.uniform(-2.0, 2.0))
-        if side == "long":
-            entry = float(opens[start_pos] + offset_pips * PIP)
-            stop = entry - risk_pips * PIP
-        else:
-            entry = float(opens[start_pos] - offset_pips * PIP)
-            stop = entry + risk_pips * PIP
-        target_r = float(rng.choice([1.5, 2.0]))
+        scenario = number % 7
+        opening = float(opens[start_pos])
+        target_r: float = 2.0
         target_price = np.nan
-        if number % 4 == 0:
+        entry_price = np.nan
+        risk_pips = int(rng.integers(3, 31))
+
+        if scenario == 0:
+            side = "long" if (number // 7) % 2 == 0 else "short"
+            order_type = "limit"
+            risk_pips = 20
+            entry_price = opening - 2 * PIP if side == "long" else opening + 2 * PIP
+            stop = (
+                entry_price - risk_pips * PIP
+                if side == "long"
+                else entry_price + risk_pips * PIP
+            )
             target_r = np.nan
-            distance = risk_pips * float(rng.choice([1.5, 2.0])) * PIP
-            target_price = entry + distance if side == "long" else entry - distance
+            target_price = (
+                entry_price + 4 * PIP
+                if side == "long"
+                else entry_price - 4 * PIP
+            )
+            if side == "long":
+                set_candle(
+                    start_pos,
+                    opening,
+                    entry_price + 10 * PIP,
+                    entry_price - 2 * PIP,
+                    opening,
+                )
+                set_candle(
+                    start_pos + 1,
+                    opening,
+                    entry_price + 8 * PIP,
+                    entry_price - 3 * PIP,
+                    entry_price + 5 * PIP,
+                )
+            else:
+                set_candle(
+                    start_pos,
+                    opening,
+                    entry_price + 2 * PIP,
+                    entry_price - 10 * PIP,
+                    opening,
+                )
+                set_candle(
+                    start_pos + 1,
+                    opening,
+                    entry_price + 5 * PIP,
+                    entry_price - 8 * PIP,
+                    entry_price - 5 * PIP,
+                )
+        elif scenario == 1:
+            side = "long" if (number // 7) % 2 == 0 else "short"
+            order_type = "market"
+            risk_pips = 10
+            fill = opening + SPREAD + SLIPPAGE if side == "long" else opening - SLIPPAGE
+            stop = fill - risk_pips * PIP if side == "long" else fill + risk_pips * PIP
+            target_distance = 2 * risk_pips * PIP
+            target = fill + target_distance if side == "long" else fill - target_distance
+            set_candle(start_pos, opening, opening + 2 * PIP, opening - 2 * PIP, opening)
+            set_candle(
+                start_pos + 1,
+                opening,
+                target + 2 * PIP if side == "long" else stop + 2 * PIP,
+                stop - 2 * PIP if side == "long" else target - 2 * PIP,
+                opening,
+            )
+        elif scenario == 2:
+            side = "short"
+            order_type = "market"
+            risk_pips = 10
+            fill = opening - SLIPPAGE
+            stop = fill + risk_pips * PIP
+            set_candle(start_pos, opening, opening + 2 * PIP, opening - 2 * PIP, opening)
+            set_candle(
+                start_pos + 1,
+                opening,
+                stop - 0.5 * PIP,
+                opening - 2 * PIP,
+                opening,
+            )
+            for offset in range(2, 5):
+                set_candle(
+                    start_pos + offset,
+                    opening,
+                    opening + 2 * PIP,
+                    opening - 2 * PIP,
+                    opening,
+                )
+        elif scenario == 3:
+            side = "long"
+            order_type = "market"
+            risk_pips = 10
+            fill = opening + SPREAD + SLIPPAGE
+            stop = fill - risk_pips * PIP
+            set_candle(start_pos, opening, opening + 2 * PIP, opening - 2 * PIP, opening)
+            gap_open = stop - 3 * PIP
+            set_candle(
+                start_pos + 1,
+                gap_open,
+                gap_open + 2 * PIP,
+                gap_open - 2 * PIP,
+                gap_open + PIP,
+            )
+        elif scenario == 4:
+            side = "long"
+            order_type = "limit"
+            valid = 1
+            risk_pips = 10
+            entry_price = opening
+            stop = entry_price - risk_pips * PIP
+            set_candle(
+                start_pos,
+                opening,
+                opening + 3 * PIP,
+                entry_price - 0.5 * PIP,
+                opening,
+            )
+            for offset in range(1, 5):
+                set_candle(
+                    start_pos + offset,
+                    opening,
+                    opening + 2 * PIP,
+                    opening - 2 * PIP,
+                    opening,
+                )
+        elif scenario == 5:
+            side = "short"
+            order_type = "market"
+            risk_pips = 20
+            fill = opening - SLIPPAGE
+            stop = fill + risk_pips * PIP
+            target_r = np.nan
+            target_price = fill - 5 * PIP
+            set_candle(start_pos, opening, opening + 2 * PIP, opening - 2 * PIP, opening)
+            set_candle(
+                start_pos + 1,
+                opening,
+                opening + 2 * PIP,
+                target_price - 0.5 * PIP,
+                opening,
+            )
+            for offset in range(2, 5):
+                set_candle(
+                    start_pos + offset,
+                    opening,
+                    opening + 2 * PIP,
+                    opening - 2 * PIP,
+                    opening,
+                )
+        else:
+            side = "long" if number % 2 == 0 else "short"
+            order_type = "market" if rng.integers(0, 2) else "limit"
+            offset_pips = float(rng.uniform(-2.0, 2.0))
+            entry_price = (
+                opening + offset_pips * PIP
+                if side == "long"
+                else opening - offset_pips * PIP
+            )
+            stop = (
+                entry_price - risk_pips * PIP
+                if side == "long"
+                else entry_price + risk_pips * PIP
+            )
+            target_r = float(rng.choice([1.5, 2.0]))
+            if rng.integers(0, 4) == 0:
+                target_r = np.nan
+                distance = risk_pips * float(rng.choice([1.5, 2.0])) * PIP
+                target_price = (
+                    entry_price + distance
+                    if side == "long"
+                    else entry_price - distance
+                )
+
+        if order_type == "market":
+            entry_price = np.nan
         plan = {
             "plan_id": number,
             "side": side,
             "order_type": order_type,
             "start_time": index[start_pos],
-            "entry_price": entry if order_type == "limit" else np.nan,
+            "entry_price": entry_price,
             "stop_price": float(stop),
-            "target_r": target_r,
+            "target_r": float(target_r),
             "target_price": float(target_price),
             "valid_candles": valid,
             "time_exit_at": index[start_pos + int(rng.integers(4, 41))],
         }
-        if number % 5 == 0:
+        if scenario == 6 and number % 5 == 0:
             plan["min_risk_pips"] = float(rng.integers(2, 8))
             plan["max_risk_pips"] = float(rng.integers(18, 35))
         plans.append(plan)
-        start_pos += valid + int(rng.integers(1, 5))
+        start_pos += valid + 10
     return df, pd.DataFrame(plans)
 
 

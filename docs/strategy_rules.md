@@ -169,3 +169,19 @@ accepted result.
   bid high >= limit. Candidate A rule 6 (cancel if a candle closes below the
   sweep low) can never trigger before a fill, because price must trade
   through the limit first; a failed setup simply fills and stops out.
+
+  - Clarifications for Candidate A implementation (2026-11-23, before any
+  results): (1) sweep = a candle in the window whose low is below a known
+  reference low and whose close is >= that level (mirror for highs); levels
+  are not consumed by earlier breaches. (2) Only the first matching break
+  within 8 candles after a sweep candle is considered. (3) Entry zone = the
+  most recently formed qualifying FVG (size >= 2 pips, formed after the sweep
+  candle and no later than the break candle). (4) The limit order is placed at
+  the close of the break candle, never before. (5) "Complete by 11:30 ET": the
+  break candle must close by 11:30 ET. (6) "Open trades closed at 12:00 ET":
+  exit at the close of the candle that closes at 12:00 ET (the 11:45 ET
+  candle). (7) "Only the first valid setup counts": at most one plan per
+  trading day, chosen by earliest order placement; setups failing the
+  stop-size filter are not valid; a plan that never fills produces no trade
+  that day. (8) The 8-candle limit never binds inside the window but is
+  implemented. (9) A-LIQ and the 08:00 window sensitivity check are deferred.

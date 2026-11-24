@@ -3,6 +3,10 @@ from datetime import date
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from src.app.candle_data import cached_load_candles
+from src.data.loader import load_candles
+from src.data.splits import HOLDOUT_START, development_set
+
 
 APP_PATH = "../src/app/main.py"
 
@@ -28,6 +32,39 @@ def number_input(app: AppTest, label: str):
 
 def test_app_default_settings_has_no_exception() -> None:
     load_app()
+
+
+def test_cached_loader_returns_only_development_rows() -> None:
+    expected = development_set(load_candles())
+    frame = cached_load_candles()
+
+    assert not frame.empty
+    assert frame.index.max() < HOLDOUT_START
+    assert len(frame) == len(expected)
+
+
+@pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])
+def test_date_range_is_development_only_with_default_and_all_overlays(
+    timeframe: str,
+) -> None:
+    app = load_app()
+    assert app.date_input[0].max < date(2024, 11, 1)
+
+    app.selectbox[0].select(timeframe).run()
+    assert not app.exception
+    assert app.date_input[0].max < date(2024, 11, 1)
+
+    for label in (
+        "Show swing highs/lows",
+        "Show fair value gaps",
+        "Show structure breaks",
+        "Show liquidity sweeps",
+    ):
+        checkbox(app, label).set_value(True)
+    app.run()
+
+    assert not app.exception
+    assert app.date_input[0].max < date(2024, 11, 1)
 
 
 @pytest.mark.parametrize("timeframe", ["15m", "1h", "4h", "1D"])

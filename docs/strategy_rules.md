@@ -272,3 +272,11 @@ accepted result.
   target rule fully objective; no discretionary filter ("clean level",
   "strong candle"); all indicator settings stated; trade frequency of at
   least one setup per week. A source scoring below 9 of 12 is not used.
+
+  - Protocol log (2026-11-23): the chart viewer loaded the 3-year file, which
+  includes holdout-period candles (2024-11-01 onward), and its default view
+  showed the latest days. Holdout-period charts were therefore viewed visually
+  (screenshots of October 2026, one sweep-marker hover check). No statistics,
+  backtests, or rule decisions used them; both candidates A and B were dropped
+  before any results existed. A guard is being added so the viewer can only
+  show development data.

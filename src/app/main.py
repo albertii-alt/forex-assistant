@@ -13,9 +13,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data.loader import load_candles
-from src.data.resample import resample_ohlcv
+from src.app.candle_data import cached_load_candles
 from src.app.rangebreaks import weekend_rangebreaks
+from src.data.resample import resample_ohlcv
 from src.detectors.fvg import detect_fvgs
 from src.detectors.sweeps import detect_liquidity_sweeps
 from src.detectors.structure import detect_structure_breaks
@@ -23,12 +23,6 @@ from src.detectors.swings import detect_swings
 
 
 MAX_CANDLES = 5_000
-
-
-@st.cache_data
-def cached_load_candles() -> pd.DataFrame:
-    """Load and validate candles once per Streamlit process."""
-    return load_candles()
 
 
 @st.cache_data
@@ -555,6 +549,7 @@ st.write(
     f"| Candle count: {len(resampled)}"
 )
 st.caption("Bid prices, UTC time.")
+st.caption("Development data only; the holdout period is hidden by design.")
 if show_swings:
     st.caption("Swings are only confirmed `right` candles after they form.")
 if show_fvgs:

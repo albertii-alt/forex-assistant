@@ -23,6 +23,7 @@ Work in order. Do not start a phase until the owner assigns it.
   - Groundwork step 2 (ET-aligned resampling, higher-timeframe alignment,
     session levels): DONE.
   - Groundwork step 3 (cost-aware backtest engine and trade metrics): DONE.
+    - Optional no-target plans and market time-open exits: DONE.
   - Candidate A plan generation: DONE.
   - Candidate B building blocks (ATR, stochastic, 4h trend state, supply and
     demand zones): DONE.

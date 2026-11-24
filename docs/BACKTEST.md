@@ -8,10 +8,14 @@ rules, broker integration, or live order execution.
 
 Call `src.backtest.engine.run_backtest(df, plans, ...)`. Plans must provide a
 unique `plan_id`, `side`, `order_type`, UTC `start_time` and `time_exit_at`,
-`entry_price`, `stop_price`, exactly one of `target_r` or `target_price`, and
-`valid_candles`. Market entries fill at the first eligible candle open;
-limit entries are tested for a fill on their live candles. Results are one
-row per plan, sorted by start-candle position.
+`entry_price`, `stop_price`, and `valid_candles`. By default, exactly one of
+`target_r` or `target_price` is required. Optional `no_target=True` disables
+the target and requires both target columns to be NaN; an absent or NaN
+`no_target` means `False`. Optional `exit_mode` accepts `"time_close"` (the
+default) or `"time_open"`; an absent or NaN value means `"time_close"`.
+Market entries fill at the first eligible candle open; limit entries are
+tested for a fill on their live candles. Results are one row per plan, sorted
+by start-candle position.
 
 Output rows with status `filled` contain realized entry, stop, target, risk,
 exit, R-multiple, pip P&L, and bars held. Other statuses are
@@ -25,8 +29,15 @@ entries pay spread and market-entry slippage; short stop/target triggers use
 the ask. Stop exits include slippage and gap-through handling, while targets
 do not receive price improvement. Stop wins when both stop and target are
 reachable in one candle. A limit-fill candle checks only the stop because
-intracandle ordering is unknown. A time exit is evaluated after that candle's
-stop/target checks.
+intracandle ordering is unknown.
+
+`"time_close"` evaluates the exit candle's stop and target before exiting at
+its close, as in the original behavior. `"time_open"` is only valid for market
+plans: candles before the exit position are checked for stops and any target;
+the exit candle is not checked and the position exits at its open, with the
+usual side-specific spread and slippage. If `time_exit_at` is later than the
+last candle, `"time_open"` uses the existing `data_end` behavior instead:
+the last candle is checked and the trade exits at its close.
 
 ## Holdout protection
 

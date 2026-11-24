@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from src.backtest.engine import OUTPUT_COLUMNS, run_backtest
+from src.backtest.metrics import summarize_trades
 from src.data.splits import HOLDOUT_START
 
 
@@ -708,6 +709,268 @@ def test_t17_inputs_unchanged_and_output_dtypes() -> None:
     assert isinstance(result.index, pd.RangeIndex)
 
 
+def no_target_plan(
+    index: pd.DatetimeIndex,
+    **overrides: object,
+) -> dict[str, object]:
+    start_pos = int(overrides.pop("start_pos", 1))
+    time_exit_pos = int(overrides.pop("time_exit_pos", 4))
+    plan = make_plan(
+        index,
+        start_pos=start_pos,
+        time_exit_pos=time_exit_pos,
+        target_r=np.nan,
+        target_price=np.nan,
+        no_target=True,
+        exit_mode="time_open",
+    )
+    plan.update(overrides)
+    return plan
+
+
+def test_e1_time_open_long_without_target() -> None:
+    candles = t1_candles()
+    index = make_index(len(candles))
+    result = one_result(candles, no_target_plan(index))
+
+    assert result["status"] == "filled"
+    assert result["fill_time"] == index[1]
+    assert result["entry_price"] == pytest.approx(1.10012, abs=1e-9)
+    assert result["risk_pips"] == pytest.approx(20.0, abs=1e-9)
+    assert pd.isna(result["target_price"])
+    assert result["exit_time"] == index[4]
+    assert result["exit_price"] == pytest.approx(1.10398, abs=1e-9)
+    assert result["exit_reason"] == "time"
+    assert result["r_multiple"] == pytest.approx(1.93, abs=1e-9)
+    assert result["pnl_pips"] == pytest.approx(38.6, abs=1e-9)
+    assert result["bars_held"] == 3
+    assert summarize_trades(pd.DataFrame([result]))["n_trades"] == 1
+
+
+def test_e2_time_open_ignores_exit_candle_stop_but_time_close_does_not() -> None:
+    candles = t1_candles()
+    candles[4] = (1.1040, 1.1050, 1.0970, 1.1045)
+    index = make_index(len(candles))
+
+    opened = one_result(candles, no_target_plan(index))
+    assert opened["exit_time"] == index[4]
+    assert opened["exit_price"] == pytest.approx(1.10398, abs=1e-9)
+    assert opened["exit_reason"] == "time"
+    assert opened["r_multiple"] == pytest.approx(1.93, abs=1e-9)
+    assert opened["pnl_pips"] == pytest.approx(38.6, abs=1e-9)
+    assert opened["bars_held"] == 3
+
+    closed = one_result(
+        candles,
+        no_target_plan(index, exit_mode="time_close"),
+    )
+    assert closed["exit_time"] == index[4]
+    assert closed["exit_price"] == pytest.approx(1.09810, abs=1e-9)
+    assert closed["exit_reason"] == "stop"
+    assert closed["r_multiple"] == pytest.approx(-1.01, abs=1e-9)
+    assert closed["pnl_pips"] == pytest.approx(-20.2, abs=1e-9)
+    assert closed["bars_held"] == 3
+
+
+def test_e3_time_open_checks_stops_before_exit_candle() -> None:
+    candles = t1_candles()
+    candles[3] = (1.1020, 1.1045, 1.0975, 1.1040)
+    index = make_index(len(candles))
+    result = one_result(candles, no_target_plan(index))
+
+    assert result["exit_time"] == index[3]
+    assert result["exit_price"] == pytest.approx(1.09810, abs=1e-9)
+    assert result["exit_reason"] == "stop"
+    assert result["r_multiple"] == pytest.approx(-1.01, abs=1e-9)
+    assert result["bars_held"] == 2
+
+
+def test_e4_time_open_stop_gap_uses_open_and_slippage() -> None:
+    candles = t1_candles()
+    candles[2] = (1.0950, 1.0960, 1.0940, 1.0955)
+    index = make_index(len(candles))
+    result = one_result(candles, no_target_plan(index))
+
+    assert result["exit_time"] == index[2]
+    assert result["exit_price"] == pytest.approx(1.09498, abs=1e-9)
+    assert result["exit_reason"] == "stop"
+    assert result["r_multiple"] == pytest.approx(-2.57, abs=1e-9)
+    assert result["pnl_pips"] == pytest.approx(-51.4, abs=1e-9)
+
+
+def test_e5_time_open_short_includes_spread_and_slippage() -> None:
+    candles = [
+        FILLER,
+        (1.1000, 1.1010, 1.0995, 1.0998),
+        (1.0998, 1.1005, 1.0990, 1.1000),
+        (1.1000, 1.1008, 1.0995, 1.0996),
+        (1.0990, 1.1000, 1.0985, 1.0992),
+    ]
+    index = make_index(len(candles))
+    plan = no_target_plan(
+        index,
+        side="short",
+        stop_price=1.10198,
+    )
+    result = one_result(candles, plan)
+
+    assert result["entry_price"] == pytest.approx(1.09998, abs=1e-9)
+    assert result["risk_pips"] == pytest.approx(20.0, abs=1e-9)
+    assert result["exit_time"] == index[4]
+    assert result["exit_price"] == pytest.approx(1.09912, abs=1e-9)
+    assert result["exit_reason"] == "time"
+    assert result["r_multiple"] == pytest.approx(0.43, abs=1e-9)
+    assert result["pnl_pips"] == pytest.approx(8.6, abs=1e-9)
+    assert result["bars_held"] == 3
+
+
+def test_e6_time_open_after_data_uses_data_end_close() -> None:
+    candles = t1_candles()
+    index = make_index(len(candles))
+    plan = no_target_plan(
+        index,
+        time_exit_at=index[4] + pd.Timedelta(days=1),
+    )
+    result = one_result(candles, plan)
+
+    assert result["exit_time"] == index[4]
+    assert result["exit_price"] == pytest.approx(1.10448, abs=1e-9)
+    assert result["exit_reason"] == "data_end"
+    assert result["r_multiple"] == pytest.approx(2.18, abs=1e-9)
+    assert result["pnl_pips"] == pytest.approx(43.6, abs=1e-9)
+    assert result["bars_held"] == 3
+
+
+def test_e7_time_open_between_candle_opens_uses_last_open() -> None:
+    candles = t1_candles()
+    index = make_index(len(candles))
+    plan = no_target_plan(
+        index,
+        time_exit_at=index[3] + pd.Timedelta(minutes=5),
+    )
+    result = one_result(candles, plan)
+
+    assert result["exit_time"] == index[3]
+    assert result["exit_price"] == pytest.approx(1.10198, abs=1e-9)
+    assert result["exit_reason"] == "time"
+    assert result["r_multiple"] == pytest.approx(0.93, abs=1e-9)
+    assert result["pnl_pips"] == pytest.approx(18.6, abs=1e-9)
+    assert result["bars_held"] == 2
+
+
+def test_e8_optional_plan_column_validation() -> None:
+    candles = t1_candles()
+    df = make_df(candles)
+    index = df.index
+    valid = no_target_plan(index)
+    invalid = [
+        dict(valid, target_r=2.0),
+        dict(valid, target_price=1.1040),
+        {
+            key: value
+            for key, value in dict(
+                valid,
+                target_r=np.nan,
+                target_price=np.nan,
+                no_target=False,
+            ).items()
+            if key != "no_target"
+        },
+        dict(valid, no_target="yes"),
+        dict(valid, exit_mode="foo"),
+        dict(valid, order_type="limit", entry_price=1.1000),
+        dict(valid, time_exit_at=index[1]),
+    ]
+    for plan in invalid:
+        with pytest.raises(ValueError):
+            run_backtest(df, pd.DataFrame([plan]))
+
+
+def test_e9_default_plan_columns_are_backward_compatible() -> None:
+    candles = t1_candles()
+    df = make_df(candles)
+    plan = make_plan(df.index)
+
+    without_columns = run_backtest(df, pd.DataFrame([plan]))
+    with_defaults = run_backtest(
+        df,
+        pd.DataFrame([dict(plan, no_target=False, exit_mode="time_close")]),
+    )
+    pd.testing.assert_frame_equal(without_columns, with_defaults)
+
+
+@pytest.mark.parametrize(
+    ("side", "candles", "stop_price"),
+    [
+        (
+            "long",
+            t1_candles(),
+            1.09812,
+        ),
+        (
+            "short",
+            [
+                FILLER,
+                (1.1000, 1.1010, 1.0995, 1.0998),
+                (1.0998, 1.1005, 1.0990, 1.1000),
+                (1.1000, 1.1008, 1.0995, 1.0996),
+                (1.0990, 1.1000, 1.0985, 1.0992),
+            ],
+            1.10198,
+        ),
+    ],
+)
+def test_e10_time_open_unit_precision(
+    side: str,
+    candles: list[tuple[float, float, float, float]],
+    stop_price: float,
+) -> None:
+    ns_index = make_index(len(candles))
+    ns_plan = no_target_plan(ns_index, side=side, stop_price=stop_price)
+    ns_result = run_backtest(make_df(candles), pd.DataFrame([ns_plan]))
+
+    us_index = ns_index.as_unit("us")
+    us_plan = no_target_plan(us_index, side=side, stop_price=stop_price)
+    us_result = run_backtest(
+        pd.DataFrame(
+            candles,
+            columns=["open", "high", "low", "close"],
+            index=us_index,
+        ),
+        pd.DataFrame([us_plan]),
+    )
+    pd.testing.assert_frame_equal(ns_result, us_result)
+
+
+def test_e11_time_open_exit_respects_busy_until_exit_candle() -> None:
+    candles = t1_candles() + [FILLER, FILLER]
+    df = make_df(candles)
+    index = df.index
+    plans = pd.DataFrame(
+        [
+            no_target_plan(index, plan_id="first"),
+            no_target_plan(
+                index,
+                plan_id="busy",
+                start_pos=4,
+                time_exit_pos=6,
+            ),
+            no_target_plan(
+                index,
+                plan_id="later",
+                start_pos=5,
+                time_exit_pos=6,
+            ),
+        ]
+    )
+
+    result = run_backtest(df, plans)
+
+    assert result["status"].tolist() == ["filled", "skipped_busy", "filled"]
+    assert result.loc[0, "exit_time"] == index[4]
+    assert result.loc[2, "fill_time"] == index[5]
+
+
 def normalize_reference_rows(rows: list[dict[str, object]]) -> pd.DataFrame:
     result = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
     for column in ("start_time", "fill_time", "exit_time"):
@@ -782,6 +1045,18 @@ def independent_reference(
     ) in prepared:
         side = str(plan["side"])
         order_type = str(plan["order_type"])
+        no_target_value = plan.get("no_target", False)
+        no_target = (
+            bool(no_target_value)
+            if isinstance(no_target_value, (bool, np.bool_))
+            else False
+        )
+        exit_mode_value = plan.get("exit_mode", "time_close")
+        exit_mode = (
+            exit_mode_value
+            if isinstance(exit_mode_value, str)
+            else "time_close"
+        )
         plan_id = plan["plan_id"]
         row = {
             "plan_id": plan_id,
@@ -812,16 +1087,19 @@ def independent_reference(
 
         valid = int(plan["valid_candles"])
         stop = float(plan["stop_price"])
-        explicit_target = (
-            None
-            if math.isnan(float(plan["target_price"]))
-            else float(plan["target_price"])
-        )
-        target_r = (
-            None
-            if math.isnan(float(plan["target_r"]))
-            else float(plan["target_r"])
-        )
+        explicit_target = None
+        target_r = None
+        if not no_target:
+            explicit_target = (
+                None
+                if math.isnan(float(plan["target_price"]))
+                else float(plan["target_price"])
+            )
+            target_r = (
+                None
+                if math.isnan(float(plan["target_r"]))
+                else float(plan["target_r"])
+            )
         fill_pos = start_pos
         if order_type == "market":
             opening = candles[start_pos][0]
@@ -870,7 +1148,9 @@ def independent_reference(
             rows.append(row)
             continue
 
-        if target_r is not None:
+        if no_target:
+            target = missing_number
+        elif target_r is not None:
             distance = target_r * risk
             target = fill + distance if side == "long" else fill - distance
         else:
@@ -881,16 +1161,32 @@ def independent_reference(
         exit_reason = ""
         for position in range(fill_pos, exit_pos + 1):
             opening, high, low, close = candles[position]
+            if (
+                exit_mode == "time_open"
+                and not exit_is_after_data
+                and position == exit_pos
+            ):
+                exit_price = (
+                    opening - slip
+                    if side == "long"
+                    else opening + spread + slip
+                )
+                exit_reason = "time"
+                actual_exit_pos = position
+                break
+
             if side == "long":
                 stop_hit = low <= stop + 1e-9
                 target_hit = (
-                    not (order_type == "limit" and position == fill_pos)
+                    not no_target
+                    and not (order_type == "limit" and position == fill_pos)
                     and high >= target - 1e-9
                 )
             else:
                 stop_hit = high + spread >= stop - 1e-9
                 target_hit = (
-                    not (order_type == "limit" and position == fill_pos)
+                    not no_target
+                    and not (order_type == "limit" and position == fill_pos)
                     and low + spread <= target + 1e-9
                 )
 
@@ -980,13 +1276,96 @@ def make_random_case(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     for number in range(120):
         valid = int(rng.integers(1, 9))
         scenario = number % 7
+        new_style = number % 5 in (0, 1) or number == 119
+        new_scenario = (number // 5) % 4
         opening = float(opens[start_pos])
         target_r: float = 2.0
         target_price = np.nan
         entry_price = np.nan
         risk_pips = int(rng.integers(3, 31))
+        new_time_exit_at: pd.Timestamp | None = None
 
-        if scenario == 0:
+        if new_style:
+            side = "long" if (number // 5) % 2 == 0 else "short"
+            order_type = "market"
+            risk_pips = 5000 if number == 119 else 20
+            fill = (
+                opening + SPREAD + SLIPPAGE
+                if side == "long"
+                else opening - SLIPPAGE
+            )
+            stop = (
+                fill - risk_pips * PIP
+                if side == "long"
+                else fill + risk_pips * PIP
+            )
+            target_r = np.nan
+            target_price = np.nan
+            time_offset = (
+                4
+                if new_scenario == 3
+                else int(rng.integers(4, 41))
+            )
+            if number == 119:
+                new_time_exit_at = index[-1] + pd.Timedelta(minutes=15)
+            else:
+                new_time_exit_at = index[start_pos + time_offset]
+
+            set_candle(
+                start_pos,
+                opening,
+                opening + 2 * PIP,
+                opening - 2 * PIP,
+                opening,
+            )
+            if number != 119 and new_scenario == 1:
+                if side == "long":
+                    set_candle(
+                        start_pos + 1,
+                        opening,
+                        opening + 2 * PIP,
+                        stop - PIP,
+                        opening,
+                    )
+                else:
+                    set_candle(
+                        start_pos + 1,
+                        opening,
+                        stop - SPREAD + PIP,
+                        opening - 2 * PIP,
+                        opening,
+                    )
+            elif number != 119 and new_scenario == 2:
+                if side == "long":
+                    gap_open = stop - 3 * PIP
+                else:
+                    gap_open = stop - SPREAD + 3 * PIP
+                set_candle(
+                    start_pos + 1,
+                    gap_open,
+                    gap_open + 2 * PIP,
+                    gap_open - 2 * PIP,
+                    gap_open + PIP,
+                )
+            elif number != 119 and new_scenario == 3:
+                exit_pos = start_pos + time_offset
+                if side == "long":
+                    set_candle(
+                        exit_pos,
+                        float(opens[exit_pos]),
+                        float(opens[exit_pos]) + 2 * PIP,
+                        stop - PIP,
+                        float(opens[exit_pos]),
+                    )
+                else:
+                    set_candle(
+                        exit_pos,
+                        float(opens[exit_pos]),
+                        stop - SPREAD + PIP,
+                        float(opens[exit_pos]) - 2 * PIP,
+                        float(opens[exit_pos]),
+                    )
+        elif scenario == 0:
             side = "long" if (number // 7) % 2 == 0 else "short"
             order_type = "limit"
             risk_pips = 20
@@ -1167,27 +1546,121 @@ def make_random_case(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "target_r": float(target_r),
             "target_price": float(target_price),
             "valid_candles": valid,
-            "time_exit_at": index[start_pos + int(rng.integers(4, 41))],
+            "time_exit_at": (
+                new_time_exit_at
+                if new_style
+                else index[start_pos + int(rng.integers(4, 41))]
+            ),
         }
-        if scenario == 6 and number % 5 == 0:
+        if new_style:
+            plan["no_target"] = True
+            plan["exit_mode"] = "time_open"
+        if not new_style and scenario == 6 and number % 5 == 0:
             plan["min_risk_pips"] = float(rng.integers(2, 8))
             plan["max_risk_pips"] = float(rng.integers(18, 35))
+        if number in (117, 118):
+            plan["time_exit_at"] = index[start_pos + 4]
         plans.append(plan)
         start_pos += valid + 10
     return df, pd.DataFrame(plans)
 
 
-@pytest.mark.parametrize("seed", [11, 23, 37, 59])
-def test_independent_reference_on_seeded_random_walk(seed: int) -> None:
-    df, plans = make_random_case(seed)
-    actual = run_backtest(df, plans)
-    expected = independent_reference(
-        list(df[["open", "high", "low", "close"]].itertuples(index=False, name=None)),
-        list(df.index),
-        plans.to_dict(orient="records"),
-        SPREAD_PIPS,
-        SLIPPAGE_PIPS,
-        PIP,
-    )
+def _seed_diagnostics(
+    df: pd.DataFrame,
+    plans: pd.DataFrame,
+    results: pd.DataFrame,
+) -> dict[str, int]:
+    counts = {
+        "time_open_time": 0,
+        "no_target_stop": 0,
+        "exit_candle_stop": 0,
+        "data_end": 0,
+        "skipped_busy": 0,
+    }
+    results_by_id = {
+        result["plan_id"]: result
+        for result in results.to_dict(orient="records")
+    }
+    for plan in plans.to_dict(orient="records"):
+        no_target_value = plan.get("no_target", False)
+        if not isinstance(no_target_value, (bool, np.bool_)) or not bool(
+            no_target_value
+        ):
+            continue
+        result = results_by_id[plan["plan_id"]]
+        if result["status"] == "skipped_busy":
+            counts["skipped_busy"] += 1
+            continue
+        if result["status"] != "filled":
+            continue
+        if result["exit_reason"] == "stop":
+            counts["no_target_stop"] += 1
+        elif result["exit_reason"] == "data_end":
+            counts["data_end"] += 1
+        elif result["exit_reason"] == "time":
+            counts["time_open_time"] += 1
+            exit_pos = int(df.index.get_indexer([result["exit_time"]])[0])
+            if plan["side"] == "long":
+                would_hit_stop = (
+                    float(df["low"].iloc[exit_pos])
+                    <= float(plan["stop_price"]) + 1e-9
+                )
+            else:
+                would_hit_stop = (
+                    float(df["high"].iloc[exit_pos]) + SPREAD
+                    >= float(plan["stop_price"]) - 1e-9
+                )
+            counts["exit_candle_stop"] += int(would_hit_stop)
+    return counts
 
-    pd.testing.assert_frame_equal(actual, expected, rtol=1e-9)
+
+def test_independent_reference_on_seeded_random_walk() -> None:
+    totals = {
+        "time_open_time": 0,
+        "no_target_stop": 0,
+        "exit_candle_stop": 0,
+        "data_end": 0,
+        "skipped_busy": 0,
+    }
+    print(
+        "seed | time_open exits | no_target stops | exit-candle stop cases "
+        "| data_end exits | skipped_busy new-style"
+    )
+    for seed in (11, 23, 37, 59):
+        df, plans = make_random_case(seed)
+        actual = run_backtest(df, plans)
+        expected = independent_reference(
+            list(
+                df[["open", "high", "low", "close"]].itertuples(
+                    index=False,
+                    name=None,
+                )
+            ),
+            list(df.index),
+            plans.to_dict(orient="records"),
+            SPREAD_PIPS,
+            SLIPPAGE_PIPS,
+            PIP,
+        )
+
+        pd.testing.assert_frame_equal(actual, expected, rtol=1e-9)
+        no_target = plans.loc[plans["no_target"].fillna(False)]
+        assert len(no_target) == 49
+        assert set(no_target["side"]) == {"long", "short"}
+        assert set(no_target["order_type"]) == {"market"}
+        assert set(no_target["exit_mode"]) == {"time_open"}
+        diagnostics = _seed_diagnostics(df, plans, actual)
+        print(
+            f"{seed} | {diagnostics['time_open_time']} | "
+            f"{diagnostics['no_target_stop']} | "
+            f"{diagnostics['exit_candle_stop']} | "
+            f"{diagnostics['data_end']} | {diagnostics['skipped_busy']}"
+        )
+        for name, count in diagnostics.items():
+            totals[name] += count
+
+    assert totals["time_open_time"] > 0
+    assert totals["no_target_stop"] > 0
+    assert totals["exit_candle_stop"] > 0
+    assert totals["data_end"] > 0
+    assert totals["skipped_busy"] > 0

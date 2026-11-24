@@ -131,10 +131,42 @@ def _prepare_plans(
             raise ValueError(f"plan {plan_id!r} valid_candles must be an integer >= 1")
         valid_candles = int(valid_number)
 
+        no_target_value = raw.get("no_target", np.nan)
+        if isinstance(no_target_value, (bool, np.bool_)):
+            no_target = bool(no_target_value)
+        elif _is_missing(no_target_value):
+            no_target = False
+        else:
+            raise ValueError(f"plan {plan_id!r} no_target must be boolean or NaN")
+
+        exit_mode_value = raw.get("exit_mode", np.nan)
+        if _is_missing(exit_mode_value):
+            exit_mode = "time_close"
+        elif isinstance(exit_mode_value, str):
+            exit_mode = exit_mode_value
+        else:
+            raise ValueError(
+                f"plan {plan_id!r} exit_mode must be 'time_close' or 'time_open'"
+            )
+        if exit_mode not in ("time_close", "time_open"):
+            raise ValueError(
+                f"plan {plan_id!r} exit_mode must be 'time_close' or 'time_open'"
+            )
+        if exit_mode == "time_open" and order_type != "market":
+            raise ValueError(
+                f"plan {plan_id!r} exit_mode 'time_open' requires a market order"
+            )
+
         stop_price = _number(raw["stop_price"], f"plan {plan_id!r} stop_price")
         target_r_missing = _is_missing(raw["target_r"])
         target_price_missing = _is_missing(raw["target_price"])
-        if target_r_missing == target_price_missing:
+        if no_target:
+            if not target_r_missing or not target_price_missing:
+                raise ValueError(
+                    f"plan {plan_id!r} no_target requires target_r and "
+                    "target_price to be NaN"
+                )
+        elif target_r_missing == target_price_missing:
             raise ValueError(
                 f"plan {plan_id!r} must specify exactly one of target_r or target_price"
             )
@@ -200,6 +232,10 @@ def _prepare_plans(
                 raise ValueError(
                     f"plan {plan_id!r} time_exit_at is earlier than its start candle"
                 )
+            if exit_mode == "time_open" and exit_pos <= start_pos:
+                raise ValueError(
+                    f"plan {plan_id!r} time_open exit must be after its start candle"
+                )
 
         prepared.append(
             {
@@ -212,9 +248,11 @@ def _prepare_plans(
                 "stop_price": stop_price,
                 "target_r": target_r,
                 "explicit_target": explicit_target,
+                "no_target": no_target,
                 "valid_candles": valid_candles,
                 "time_exit_at": time_exit_at,
                 "exit_pos": exit_pos,
+                "exit_mode": exit_mode,
                 "min_risk_pips": min_risk,
                 "max_risk_pips": max_risk,
             }
@@ -342,6 +380,8 @@ def run_backtest(
         plan_id = plan["plan_id"]
         side = str(plan["side"])
         order_type = str(plan["order_type"])
+        no_target = bool(plan["no_target"])
+        exit_mode = str(plan["exit_mode"])
         start_pos = int(plan["start_pos"])
         if start_pos >= len(index):
             rows.append(_empty_output_row(plan, "no_data"))
@@ -401,25 +441,43 @@ def run_backtest(
             rows.append(_empty_output_row(plan, "skipped_risk_filter"))
             continue
 
-        if plan["target_r"] is not None:
+        if no_target:
+            target_price = np.nan
+        elif plan["target_r"] is not None:
             distance = float(plan["target_r"]) * risk
             target_price = fill_price + distance if side == "long" else fill_price - distance
         else:
             target_price = float(explicit_target)
 
+        exit_is_after_data = plan["time_exit_at"] > index[-1]
         exit_pos_actual = -1
         exit_price = np.nan
         exit_reason = ""
         for position in range(fill_pos, exit_pos + 1):
+            if (
+                exit_mode == "time_open"
+                and not exit_is_after_data
+                and position == exit_pos
+            ):
+                if side == "long":
+                    exit_price = opens[position] - slippage
+                else:
+                    exit_price = opens[position] + spread + slippage
+                exit_reason = "time"
+                exit_pos_actual = position
+                break
+
             if side == "long":
                 stop_hit = lows[position] <= stop_price + PRICE_TOLERANCE
                 target_hit = (
-                    order_type != "limit" or position != fill_pos
+                    not no_target
+                    and (order_type != "limit" or position != fill_pos)
                 ) and highs[position] >= target_price - PRICE_TOLERANCE
             else:
                 stop_hit = highs[position] + spread >= stop_price - PRICE_TOLERANCE
                 target_hit = (
-                    order_type != "limit" or position != fill_pos
+                    not no_target
+                    and (order_type != "limit" or position != fill_pos)
                 ) and lows[position] + spread <= target_price + PRICE_TOLERANCE
 
             if stop_hit:

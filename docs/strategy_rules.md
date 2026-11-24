@@ -223,3 +223,27 @@ accepted result.
   state at 4h candle c uses only swings (left=right=3) confirmed at or before
   c, and is usable on 15m candles only from the first open at or after c's
   close_time.
+
+  - Candidate B setup-finder clarifications (2026-11-23, before any Candidate B
+  results): (1) Direction: a 4h state of "up" allows demand zones (longs), a
+  state of "down" allows supply zones (shorts); anything else, including no
+  state yet, means no trade. The state used is the one aligned to the open of
+  the confirmation candle t (conservative, via close_time). (2) A candle at
+  position c can be the first touch or the confirmation candle only if the
+  zone is already known (c > the position of known_at) and not yet expired (c
+  < the position of expires_at, when it exists). (3) First touch s = the first
+  such candle whose high reaches the supply zone_low (demand: whose low
+  reaches zone_high). (4) Confirmation t = the FIRST candle in [s, s+6] with
+  %K[t-1] >= 80 and %K[t] < 80 (demand: %K[t-1] <= 20 and %K[t] > 20), both
+  values defined. Only that first crossing is considered. (5) The zone must
+  not have closed_through_at at or before t. (6) The market order is placed
+  at the open of the candle after t, which must exist and open between 09:30
+  and 11:45 ET inclusive. (7) Stop = 2 pips beyond the zone's far side. The
+  5-30 pip filter is applied to the cost-adjusted risk, computed exactly as
+  the backtest engine fills (long: open + 1.0 + 0.2 pips; short: open - 0.2
+  pips), so plans equal trades. (8) Time exit: the open of the 15:45 ET
+  candle (it closes at 16:00 ET). (9) At most one plan per ET calendar date:
+  the earliest entry time; ties go to the zone with the most recent known_at,
+  then the most recent base_time. (10) Known property: a zone can be created
+  even if a candle closed beyond it between its base and its qualifying
+  candle, because closed_through_at only looks at candles after known_at.

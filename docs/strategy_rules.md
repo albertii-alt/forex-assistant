@@ -280,3 +280,37 @@ accepted result.
   backtests, or rule decisions used them; both candidates A and B were dropped
   before any results existed. A guard is being added so the viewer can only
   show development data.
+
+  - v0.4 (2026-11-24, before any counts or results): Candidates A and B are
+  dropped (inconclusive, see above). Candidate C replaces them as the round 2
+  primary. Pre-registered test: Candidate C, single configuration, no
+  variants. The Asian-range breakout (backup) is reviewed only if C is
+  INCONCLUSIVE or REJECTED at the count gate.
+
+  ## Candidate C: Donchian breakout, 4h, EUR/USD (Turtle System 1 adaptation)
+  - [SOURCE] Entry on a 20-period channel breakout, exit on the opposite
+    10-period breakout, initial stop 2N where N = 20-period average true range.
+    The original is daily-bar futures with a skip rule, pyramiding and position
+    sizing.
+  - [OURS] Everything below. Daily timeframe, skip rule, pyramiding and position
+    sizing are NOT used. A daily version is a different strategy and is not
+    tested.
+  Candles: 4h aligned to 17:00 ET (existing resampler). N = Wilder ATR(20) on
+  4h candles, measured at the signal candle's close.
+  Signal at candle c: LONG if close[c] > max(high[c-20..c-1]); SHORT if
+  close[c] < min(low[c-20..c-1]); both strict, the current candle excluded.
+  Entry: market order at the open of candle c+1 (cost rules unchanged).
+  Stop: open[c+1] -/+ 2N (long/short), fixed after entry (never trailed).
+  Exit: the first candle e after entry with close[e] < min(low[e-10..e-1])
+  (long) or close[e] > max(high[e-10..e-1]) (short), strict; exit at the open
+  of e+1. The stop is checked on every candle before the channel exit.
+  No profit target. One position at a time; signals while a position is open are
+  ignored. Positions open at the end of the data are closed at the last candle
+  (exit reason "data_end").
+  No session, day-of-week or risk-size filters.
+  Count gate: at least 130 development ENTRIES, counted with a state machine
+  that applies the stop and channel exit rules to price only (no R multiples,
+  no returns). The state machine must reproduce the backtest engine's busy-rule
+  behavior exactly (verified on synthetic data). If the gate is not met:
+  INCONCLUSIVE, nothing loosened.
+  Acceptance test, costs and sealed holdout: unchanged.

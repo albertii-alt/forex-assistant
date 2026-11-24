@@ -55,6 +55,18 @@ this state on a lower timeframe, consume it only through
 `src.data.resample_et.align_htf_to_ltf`, which uses the higher-timeframe
 `close_time` so the state is unavailable before its candle closes.
 
+## Supply and demand zones
+
+`detect_zones()` marks the full wick range of a base candle when a later close
+within the configured lookahead moves at least the configured ATR multiple
+beyond its low (supply) or high (demand). ATR is measured at the base candle's
+close. `known_at` is the confirming candle's open time: the zone is known at
+that candle's close and usable from the next candle's open. Creation thresholds
+are inclusive with a 1e-9 tolerance. A zone is closed through only by a later
+close strictly beyond its far side; the close-through search includes the
+expiry candle. `expires_at` is the open time `expiry_candles` after confirmation
+when that candle exists in the data, otherwise it is `NaT`.
+
 ## Timing rule
 
 All timestamps are candle OPEN times. A fact confirmed at a candle close is

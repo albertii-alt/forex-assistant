@@ -46,6 +46,15 @@ Set-at fields identify the first candle attaining each extreme. If either
 the overnight range or its confirming morning candle is absent, its level,
 set-at time, and known-at time are null.
 
+## Higher-timeframe trend state
+
+`htf_trend_state()` classifies each higher-timeframe candle using the last two
+confirmed swing highs and lows available at that candle's close. Both pairs
+must rise for `up` or fall for `down`; all other cases are `none`. When using
+this state on a lower timeframe, consume it only through
+`src.data.resample_et.align_htf_to_ltf`, which uses the higher-timeframe
+`close_time` so the state is unavailable before its candle closes.
+
 ## Timing rule
 
 All timestamps are candle OPEN times. A fact confirmed at a candle close is

@@ -185,3 +185,41 @@ accepted result.
   stop-size filter are not valid; a plan that never fills produces no trade
   that day. (8) The 8-candle limit never binds inside the window but is
   implemented. (9) A-LIQ and the 08:00 window sensitivity check are deferred.
+
+  - Pre-registered plan-count test (2026-11-23, BEFORE any Candidate A backtest
+  and before counts at the settings below were seen): v0.3 Candidate A yields
+  68 plans on development data (about 8 per year), too few for the 100-trade
+  minimum. Settings ladder, each rung cumulative:
+  R0 = v0.3 as written.
+  R1 = R0 with min_fvg_pips 1.0.
+  R2 = R1 with window start 08:00 ET.
+  R3 = R2 with setup deadline 12:30 ET, time exit at the 12:45 ET candle open
+       (13:00 ET close), confirm_candles 12.
+  Selection rule: using development data and counts only (never returns), the
+  lowest rung whose estimated FILLED development trades is at least 150
+  becomes v0.4's Candidate A primary (A-2R at those settings). If no rung
+  reaches 150, Candidate A is dropped as INCONCLUSIVE and nothing further is
+  loosened. No other settings are tried. Candidate A at v0.4 settings is a
+  different strategy from v0.3 and is described as such; the acceptance test,
+  costs and sealed holdout are unchanged.
+
+  - Candidate A result (2026-11-23): the count-only ladder on development data
+  gave 19, 22, 51 and 80 estimated filled plans for R0-R3 (68, 78, 139 and
+  206 plans). No rung reached the pre-registered 150, so Candidate A is
+  INCONCLUSIVE and is dropped. No Candidate A backtest was run and no returns
+  were seen. No further rungs will be tried. The setup-finder code stays in
+  the repository as a tested, unused module.
+- Candidate B gate and clarifications (2026-11-23, before any Candidate B
+  results): (1) Count gate: after the B setup finder is built, count plans on
+  development data (no backtest). B uses market entries, so plans = trades.
+  Require at least 130 development plans (the holdout is about a quarter of
+  the development length, leaving about 30 for it). If fewer, B is
+  INCONCLUSIVE and nothing is loosened. (2) ATR(14) uses Wilder smoothing:
+  TR = max(H-L, |H-prevC|, |L-prevC|), first candle TR = H-L, first ATR = mean
+  of the first 14 TRs, then ATR = (prev*13 + TR)/14. (3) Stochastic (5,3,3):
+  raw K = 100*(C - lowest low of the last 5 candles including the current one)
+  / (highest high - lowest low), NaN when the range is zero; %K = SMA(3) of
+  raw K; %D = SMA(3) of %K. Rules use %K with levels 80/20. (4) The 4h trend
+  state at 4h candle c uses only swings (left=right=3) confirmed at or before
+  c, and is usable on 15m candles only from the first open at or after c's
+  close_time.

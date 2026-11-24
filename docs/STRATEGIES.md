@@ -11,6 +11,11 @@ It uses the configured session levels, structure breaks, and fair value gaps
 to identify a valid setup. The resulting limit plans are inputs to the
 cost-aware backtester; this function does not simulate fills or trades.
 
+The setup window, setup deadline, and candle-open time exit may be supplied
+through keyword-only parameters. Their defaults remain 09:30, 11:30, and
+11:45 America/New_York respectively. The parameters are research settings
+for the pre-registered settings ladder, not additional strategy concepts.
+
 For research, load the 10-year candles and apply `development_set()` before
 calling the plan finder. The holdout remains sealed unless a candidate first
 passes the development acceptance criteria, and may then be evaluated only

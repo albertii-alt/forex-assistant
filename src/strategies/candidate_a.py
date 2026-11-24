@@ -431,12 +431,17 @@ def find_candidate_a_plans(
     confirm_candles: int = 8,
     valid_candles: int = 8,
     pip_size: float = 0.0001,
+    *,
+    window_start_et: time = WINDOW_START_ET,
+    setup_deadline_et: time = SETUP_DEADLINE_ET,
+    time_exit_et: time = TIME_EXIT_ET,
 ) -> pd.DataFrame:
     """Find at most one first-valid Candidate A plan per ET calendar date.
 
-    The setup window is 09:30-11:30 ET. A break must close by 11:30 ET.
-    Plans are placed at the following candle open and use the 11:45 ET candle
-    open as the exit boundary (that candle closes at 12:00 ET). Prices are
+    The setup window is configurable from window_start_et to setup_deadline_et.
+    A break must close by setup_deadline_et.
+    Plans are placed at the following candle open and use time_exit_et as the
+    candle-open exit boundary. Prices are
     BID-side levels; spread and slippage are applied later by the backtester.
     Detector break frames are expected in position order. If an injected frame
     is unsorted, equal positions retain row order and the earliest position
@@ -455,6 +460,20 @@ def find_candidate_a_plans(
     max_risk_pips = _validate_numeric("max_risk_pips", max_risk_pips)
     target_r = _validate_numeric("target_r", target_r, strictly_positive=True)
     pip_size = _validate_numeric("pip_size", pip_size, strictly_positive=True)
+    for name, value in (
+        ("window_start_et", window_start_et),
+        ("setup_deadline_et", setup_deadline_et),
+        ("time_exit_et", time_exit_et),
+    ):
+        if not isinstance(value, time):
+            raise ValueError(f"{name} must be a datetime.time")
+    if not (
+        window_start_et < setup_deadline_et
+        and setup_deadline_et <= time_exit_et
+    ):
+        raise ValueError(
+            "window_start_et < setup_deadline_et <= time_exit_et"
+        )
 
     if levels is None:
         levels = detect_session_levels(df)
@@ -535,9 +554,9 @@ def find_candidate_a_plans(
     for day in days:
         day_positions = positions_by_day[day]
         day_levels = levels_by_day.get(day)
-        window_start = _utc_wall_time(day, WINDOW_START_ET)
-        deadline = _utc_wall_time(day, SETUP_DEADLINE_ET)
-        time_exit = _utc_wall_time(day, TIME_EXIT_ET)
+        window_start = _utc_wall_time(day, window_start_et)
+        deadline = _utc_wall_time(day, setup_deadline_et)
+        time_exit = _utc_wall_time(day, time_exit_et)
         for sweep_pos in day_positions:
             candle_open = index[sweep_pos]
             if candle_open < window_start or candle_open + CANDLE_DURATION > deadline:

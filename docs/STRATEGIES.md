@@ -56,3 +56,22 @@ copy when the input has no volume; volume is needed by the shared ET resampler
 but does not affect trend state. For real-data plan counts, call
 `development_set(load_candles_10y())` before the finder. The holdout remains
 sealed until the pre-registered development gate is passed.
+
+## Candidate C: 4-hour Donchian breakout
+
+`find_candidate_c_plans(df)` discovers fixed 20-period Donchian breakout
+plans on 4-hour candles aligned to 17:00 America/New_York. A long signal
+requires a closed candle close above the previous 20 4-hour highs; a short
+requires a close below the previous 20 lows. The current signal candle is
+excluded. It uses Wilder ATR(20) at the signal candle and a fixed initial
+stop of 2 ATR from the following 4-hour candle open.
+
+The market entry is the open of the first 15-minute candle in the following
+4-hour bin. The plan has no target and uses `exit_mode="time_open"`. A long
+exit signal is the first closed candle after entry whose close is below the
+previous 10 lows; the short mirror uses the previous 10 highs. Exit is at the
+open of the following 4-hour bin. Partial final bins may provide entry timing
+but never provide signal or exit information until closed.
+
+`count_candidate_c_entries(df, plans)` independently applies the busy rule,
+fixed stop, time-open exit, and data-end behavior for price-only entry counts.

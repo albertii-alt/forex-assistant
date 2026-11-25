@@ -28,6 +28,8 @@ Work in order. Do not start a phase until the owner assigns it.
   - Candidate B building blocks (ATR, stochastic, 4h trend state, supply and
     demand zones): DONE.
   - Candidate B setup finder (plans only; no real-data backtest): DONE.
+  - Candidate C 4h Donchian plan finder and price-only entry counter:
+    DONE.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
 - Phase 6: Risk module (position sizing, daily loss limit, max trades per

@@ -338,3 +338,16 @@ accepted result.
   uses the same count gate (at least 130 development plans, counts only), the
   same acceptance test, the same cost model and the same sealed holdout as C.
   Candidate C's rules and status are unchanged.
+
+    - Candidate C result (2026-11-25): the single pre-registered development
+  backtest was run once, at default costs. Plans 1445 and executed trades 416
+  (213 long, 203 short) matched the pre-registered counts exactly. Results: win
+  rate 29.6%, expectancy -0.114R, expectancy without the 5 best trades -0.192R,
+  profit factor 0.80, maximum drawdown 51.6R. Three of four criteria failed
+  (expectancy, expectancy ex-top5, profit factor). Outcome: REJECTED. The
+  report-only 2.0 pip spread rerun gave expectancy -0.137R and profit factor
+  0.76 (419 trades) and played no part in the outcome. No holdout evaluation
+  will be run for Candidate C, and the sealed holdout (2024-11-01 onward) has
+  never been used. No rule, parameter or cost assumption was changed after the
+  result, and no variants will be tested. The code stays in the repository as
+  a tested, unused module.

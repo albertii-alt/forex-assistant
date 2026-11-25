@@ -325,3 +325,16 @@ accepted result.
   rule and reports counts only. (6) Development count result (counts only):
   1445 plans, 416 entries (213 long, 203 short); the gate of 130 is MET once
   the counter-equals-engine check on seeded data passes.
+
+    - Round 2 reconciliation (2026-11-25, before any Candidate D rules, counts or
+  results existed): earlier notes of the round 2 source decisions did not reach
+  this file and are recorded now. (1) A paid-course EUR/USD video was reviewed
+  with the codability scorecard, scored 3 of 12, and was rejected; no paid
+  material is used. (2) The second round 2 source is the Asian-range breakout at
+  the London open on 15m (scorecard 11 of 12). This replaces the v0.4 wording
+  that made it a backup reviewed only after C failed the count gate. (3) Round 2
+  contains exactly two candidates, C and D, and no further sources. (4) D must
+  have every parameter fixed and logged here BEFORE its counts are computed, and
+  uses the same count gate (at least 130 development plans, counts only), the
+  same acceptance test, the same cost model and the same sealed holdout as C.
+  Candidate C's rules and status are unchanged.

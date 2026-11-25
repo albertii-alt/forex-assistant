@@ -314,3 +314,14 @@ accepted result.
   behavior exactly (verified on synthetic data). If the gate is not met:
   INCONCLUSIVE, nothing loosened.
   Acceptance test, costs and sealed holdout: unchanged.
+
+  - Candidate C clarifications (2026-11-24, before any backtest or outcome was
+  seen): (1) the exit signal can occur at the entry candle's own close
+  (e >= c+1). (2) A 4h candle that has not closed within the data is never used
+  for a signal or exit. (3) A plan whose entry candle is the last candle of
+  the data is dropped. (4) Entries and exits that fall after a weekend or
+  holiday gap use the first 15m candle of the next 4h bin. (5) The count gate
+  counts entries from a price-only state machine that mirrors the engine's busy
+  rule and reports counts only. (6) Development count result (counts only):
+  1445 plans, 416 entries (213 long, 203 short); the gate of 130 is MET once
+  the counter-equals-engine check on seeded data passes.

@@ -351,3 +351,38 @@ accepted result.
   never been used. No rule, parameter or cost assumption was changed after the
   result, and no variants will be tested. The code stays in the repository as
   a tested, unused module.
+
+    - Candidate D pre-registration (2026-11-25, before any Candidate D counts or
+  results): Asian-range breakout at the London open, EUR/USD, 15m bid candles.
+  [SOURCE] the commonly published London-breakout recipe (range, range-width
+  filter, close outside the range, H1 50 EMA agreement, stop at the opposite
+  side). [OURS] every number and definition below. Published win rates and
+  profit claims were not used.
+  (1) Time zone: Europe/London local time (DST-aware). Only dates with data.
+  (2) Asian range: the highest high and lowest low of the 28 candles opening
+  01:00 to 07:45 London time (the range ends at the 08:00 London open). All 28
+  candles must exist, otherwise no trade that date.
+  (3) Range filter: width = high minus low in pips. Trade only if 20.0 <=
+  width <= 60.0.
+  (4) Breakout: the first candle opening between 08:00 and 09:15 London time
+  (inclusive) whose close is above the range high (long) or below the range low
+  (short), strict. Only that first breakout candle is considered; if it fails
+  rule (5), there is no trade that date.
+  (5) Trend filter: H1 candles built from the 15m data in UTC hours (existing
+  resampler). Use the last H1 candle that closed at or before the breakout
+  candle's close. EMA(50) of H1 closes (smoothing 2/51, started at the first H1
+  candle, defined only from the 50th H1 candle). Long needs H1 close > EMA;
+  short needs H1 close < EMA, strict.
+  (6) Entry: market order at the open of the candle after the breakout candle
+  (cost rules unchanged).
+  (7) Stop: long = range low, short = range high. Fixed, no buffer, never moved.
+  (8) Target: 1.5R, fixed. No partial exits, no break-even move, no trailing.
+  (9) Time exit: an open position is closed at the close of the 16:45 London
+  candle (17:00 London time).
+  (10) At most one plan per London date. No news filter and no spread filter
+  (not codable with our data).
+  (11) Count gate: at least 130 development plans, counted with the finder
+  only (no backtest, no returns). Plans equal trades because a position always
+  closes the same day. If fewer than 130: INCONCLUSIVE, nothing loosened.
+  (12) Acceptance test, cost model and sealed holdout unchanged. One
+  development backtest only, no variants. Report-only 2.0 pip spread rerun.

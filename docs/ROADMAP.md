@@ -30,6 +30,12 @@ Work in order. Do not start a phase until the owner assigns it.
   - Candidate B setup finder (plans only; no real-data backtest): DONE.
   - Candidate C 4h Donchian plan finder and price-only entry counter:
     DONE.
+      - Candidate C development backtest: REJECTED (one run, logged).
+  - Candidate D (Asian-range London breakout) finder, count gate (513 plans)
+    and development backtest: DONE, REJECTED (one run, logged).
+  - Candidates A and B: INCONCLUSIVE at the count gate (logged, no backtest).
+  - Round 2 complete. No candidate has passed and the holdout is untouched.
+    Any further strategy work needs a new pre-registered round.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
 - Phase 6: Risk module (position sizing, daily loss limit, max trades per

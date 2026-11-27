@@ -408,3 +408,20 @@ accepted result.
   distance median 34.0 pips (10th to 90th percentile 24.0 to 50.7). The count
   gate (at least 130 plans) is MET. Rules unchanged; the one development
   backtest is still to come.
+
+    - Candidate D result (2026-11-25): the single pre-registered development
+  backtest was run once, at default costs. Plans 513 and executed trades 513
+  (283 long, 230 short) matched the pre-registered count exactly and every plan
+  filled. Results: win rate 48.5%, expectancy -0.0016R, expectancy without the
+  5 best trades -0.0164R, profit factor 0.996, maximum drawdown 23.6R. Exit
+  reasons (report only): time 264, stop 171, target 78. Three of four criteria
+  failed (expectancy, expectancy ex-top5, profit factor). Outcome: REJECTED.
+  The report-only 2.0 pip spread rerun gave expectancy -0.0295R and profit
+  factor 0.927 and played no part in the outcome. No holdout evaluation will be
+  run for Candidate D, and the sealed holdout (2024-11-01 onward) has never been
+  used. No rule, parameter or cost assumption was changed after the result, and
+  no variants will be tested. Round 2 is complete: C and D both REJECTED (A and
+  B INCONCLUSIVE in round 1). The code stays in the repository as tested,
+  unused modules. Any future candidate must be pre-registered as a new round,
+  and the number of candidates already tried on the same development data must
+  be taken into account when judging a future pass.

@@ -29,3 +29,19 @@ Personal record only, not financial advice.
 Limits note: the daily loss limit built on this journal uses realized (closed)
 results only. An open trade that is currently losing is not counted. The
 one-open-position rule is what limits exposure while a trade is open.
+
+## Planning workflow
+
+`src.journal.workflow` combines realized journal balances, the as-of
+`trading_day_summary`, daily limits, and cost-aware position sizing. The
+start-of-day balance includes realized P&L only from trading days strictly
+before the current trading day; the current balance includes realized P&L
+closed by the requested time. Future opens and closes do not affect a plan.
+
+`plan_trade` is a read-only decision aid. Its `blocking_reasons` preserve the
+daily-limit reason order and append `size_too_small` when the rounded position
+does not meet the minimum lot step. `open_planned_trade` recomputes the plan
+at the proposed open time and saves only when no blocking reason remains. It
+stores the rounded position size and its actual planned risk, not the nominal
+risk budget. This workflow records plans in the journal; it does not place
+orders or guarantee a maximum loss.

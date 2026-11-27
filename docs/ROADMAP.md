@@ -44,6 +44,7 @@ Work in order. Do not start a phase until the owner assigns it.
   - News blackout windows: later (needs an economic calendar)
 - Phase 7: Trade journal and alerts (IN PROGRESS)
   - Trade journal storage (SQLite) and trading-day summary: DONE
+  - Planning workflow (balances, plan check, checked save): DONE
   - Entry and close screen: next
   - Alerts: later
 - Phase 8: LLM features (news and event summaries, journal review).

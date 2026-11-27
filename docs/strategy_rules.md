@@ -386,3 +386,25 @@ accepted result.
   closes the same day. If fewer than 130: INCONCLUSIVE, nothing loosened.
   (12) Acceptance test, cost model and sealed holdout unchanged. One
   development backtest only, no variants. Report-only 2.0 pip spread rerun.
+
+    - Candidate D clarifications and count (2026-11-25, counts only, no outcome
+  seen). Clarified before the count was reviewed: (a) a London date whose entry
+  candle is missing produces no plan; (b) the H1 candle used for the trend
+  filter is the complete UTC-hour candle (all four 15m candles present) whose
+  close time equals the breakout candle's close floored to the whole hour; (c)
+  range width is rounded to 6 decimals before comparing with 20.0 and 60.0
+  pips; (d) time_exit_at is the open time of the 16:45 London candle and the
+  engine exits at that candle's close (17:00 London time); (e) a London local
+  time that does not exist makes that date's check fail. Two hand fixtures
+  (S2 and S3) were corrected because of a spec error of mine, not a rule
+  change: the 07:00-08:00 UTC H1 candle was flat and could not pass the strict
+  trend filter, which rule 5 correctly implies. Count on development data
+  (2016-11-01 to 2024-10-31): 2,502 dates with data, 2,083 complete ranges,
+  1,403 within 20-60 pips, 844 with a breakout in the window, 513 passing the
+  H1 EMA filter = 513 plans (283 long, 230 short). Per year: 2016: 10, 2017:
+  77, 2018: 89, 2019: 29, 2020: 69, 2021: 71, 2022: 69, 2023: 73, 2024: 26
+  (ten months). The 2019 and 2024 dips come from fewer Asian ranges reaching
+  20 pips (range filter passes 91 of 260 complete ranges in 2019). Stop
+  distance median 34.0 pips (10th to 90th percentile 24.0 to 50.7). The count
+  gate (at least 130 plans) is MET. Rules unchanged; the one development
+  backtest is still to come.

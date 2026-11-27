@@ -38,8 +38,10 @@ Work in order. Do not start a phase until the owner assigns it.
     Any further strategy work needs a new pre-registered round.
 - Phase 5: Backtester with spread and slippage costs, out-of-sample and
   walk-forward testing.
-- Phase 6: Risk module (position sizing, daily loss limit, max trades per
-  day, news blackout windows).
+- Phase 6: Risk module (IN PROGRESS)
+  - Position sizing (cost-aware, rounds down, risk cap): DONE
+  - Daily limits (max trades per day, daily loss limit, one open position): DONE
+  - News blackout windows: later (needs an economic calendar)
 - Phase 7: Trade journal and alerts.
 - Phase 8: LLM features (news and event summaries, journal review).
 - Phase 9: Paper trading on a demo account.

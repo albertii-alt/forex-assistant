@@ -45,3 +45,15 @@ at the proposed open time and saves only when no blocking reason remains. It
 stores the rounded position size and its actual planned risk, not the nominal
 risk budget. This workflow records plans in the journal; it does not place
 orders or guarantee a maximum loss.
+
+## Journal screen
+
+Run the screen from the project folder with
+`streamlit run src/app/journal_page.py`. The Today section shows the current balance,
+trading-day limits, and recent journal entries; Plan a trade checks a proposed
+paper or demo trade before saving; Close a trade records the result from the
+account statement. The starting balance is typed on the screen and is NOT
+stored, so enter the same number every time. The saved result must come from
+the user's paper or demo account statement.
+
+Paper and demo only, experimental. Not financial advice.

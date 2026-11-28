@@ -21,6 +21,7 @@ from src.journal.store import (
     trading_day_summary,
 )
 from src.journal.workflow import account_balances, open_planned_trade, plan_trade
+from src.journal.review import format_review, review_trades
 
 
 def _queue_save() -> None:
@@ -313,5 +314,8 @@ try:
         st.success(close_success)
     if close_error is not None:
         st.error(close_error)
+
+    st.header("Review")
+    st.text(format_review(review_trades(list_trades(conn))))
 finally:
     conn.close()

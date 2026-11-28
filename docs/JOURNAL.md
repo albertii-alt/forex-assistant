@@ -57,3 +57,20 @@ stored, so enter the same number every time. The saved result must come from
 the user's paper or demo account statement.
 
 Paper and demo only, experimental. Not financial advice.
+
+## Review
+
+The Review section summarizes all closed journal trades, not just the current
+trading day. R is the realized result divided by planned risk. Win rate is the
+share of closed trades with positive R. Average R is the mean result per closed
+trade. The range is only shown from 30 closed trades, because with fewer trades
+plus or minus 2 standard errors is far too narrow and would look more precise
+than it is; from 30 trades it is a rough guide that assumes outcomes are roughly
+bell-shaped.
+
+Profit factor is gross positive R divided by the absolute gross negative R.
+Max drawdown in R is the largest fall in cumulative R, while the longest losing
+streak counts consecutive losses. With few trades, luck can dominate the
+outcome, so the sample-size note explains why averages are not yet conclusive.
+
+Planning aid only, not financial advice.

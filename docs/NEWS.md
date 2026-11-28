@@ -20,3 +20,18 @@ If the calendar is missing or stale the tools say so and never assume there is
 no news.
 
 Planning aid only, not financial advice.
+
+## Fetching the calendar
+
+From the project folder, run `python -m scripts.fetch_news_calendar`. Fetch at
+most about once a day; the script enforces a six-hour minimum interval. The
+weekly feed is unofficial and may block requests or change.
+
+If the script says the feed refused the request (403 or 429) or otherwise
+fails, open <https://nfs.faireconomy.media/ff_calendar_thisweek.json> in a
+browser, save it as `data/news/manual.json`, then run
+`python -m scripts.fetch_news_calendar --from-file data/news/manual.json`.
+The `data/news/` directory is git-ignored.
+
+If the calendar is missing or stale the tools say so and never assume there is
+no news.

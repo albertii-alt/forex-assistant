@@ -42,7 +42,8 @@ Work in order. Do not start a phase until the owner assigns it.
   - Position sizing (cost-aware, rounds down, risk cap): DONE
   - Daily limits (max trades per day, daily loss limit, one open position): DONE
   - News calendar logic (parse, freshness check, blackout windows, briefing): DONE
-  - Calendar fetch script and wiring into planner and screen: next
+  - Calendar fetch script (manual run, fake-network tests): DONE
+  - Wiring into planner and screen: next
 - Phase 7: Trade journal and alerts (IN PROGRESS)
   - Trade journal storage (SQLite) and trading-day summary: DONE
   - Planning workflow (balances, plan check, checked save): DONE

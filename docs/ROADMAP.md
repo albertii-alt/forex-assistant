@@ -51,6 +51,10 @@ Work in order. Do not start a phase until the owner assigns it.
   - Planning workflow (balances, plan check, checked save): DONE
   - Entry and close screen (Streamlit, paper/demo only): DONE
   - Alerts: later
-- Phase 8: LLM features (news and event summaries, journal review).
+- Phase 8: LLM features (news and event summaries, journal review)
+  - Journal review report (plain statistics, no LLM, shown on the journal
+    screen with a sample-size warning): DONE
+  - News briefing (plain text from the calendar, no LLM): DONE
+  - LLM summaries and explanations: later (needs a free option first)
 - Phase 9: Paper trading on a demo account.
 - Phase 10: ML setup filtering, only if earlier results justify it.

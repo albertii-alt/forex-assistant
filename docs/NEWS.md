@@ -35,3 +35,15 @@ The `data/news/` directory is git-ignored.
 
 If the calendar is missing or stale the tools say so and never assume there is
 no news.
+
+## News on the screen
+
+The journal screen uses the saved calendar to show a Manila-time briefing and
+warn about unavailable calendars or active blackout windows. Fetching remains
+a manual command; the screen does not fetch calendar data. These warnings are
+advice only and do not block saving a journal plan.
+
+If the calendar is missing or stale the tools say so and never assume there is
+no news.
+
+Planning aid only, not financial advice.

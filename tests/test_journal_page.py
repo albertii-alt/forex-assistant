@@ -272,3 +272,11 @@ def test_page_uses_checked_workflow_without_data_loaders() -> None:
     assert "add_trade(" not in source
     assert "load_candles" not in source
     assert "live" not in source
+
+
+@pytest.fixture(autouse=True)
+def isolate_news_calendar(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(
+        "FOREX_NEWS_DIR",
+        str(tmp_path / "no_news_for_tests"),
+    )

@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import src.app.journal_view as journal_view
+import src.news.service as news_service
 from src.journal.store import (
     ALLOWED_MODES,
     close_trade,
@@ -35,6 +36,7 @@ st.title("Trade journal")
 st.warning("Paper and demo only. Experimental. Not financial advice.")
 
 now = journal_view.get_now()
+context = news_service.load_news_context(now, news_service.news_directory())
 conn = open_journal(journal_view.journal_path())
 save_success = None
 save_error = None
@@ -91,6 +93,14 @@ try:
             close_error = str(exc)
 
     st.write("Now: " + journal_view.format_local_time(now))
+    st.header("News")
+    if context["fetched_at"] is not None:
+        st.text(
+            f"Calendar fetched: "
+            f"{journal_view.format_local_time(context['fetched_at'])}, "
+            f"source: {context['source']}"
+        )
+    st.text(context["briefing"])
     st.header("Today")
     starting_balance = st.number_input(
         "Paper account starting balance (USD) - always enter the same number",
@@ -223,6 +233,22 @@ try:
         )
         for blocking_reason in plan["blocking_reasons"]:
             st.warning(journal_view.describe_reason(blocking_reason))
+
+    if not context["usable"]:
+        st.warning(
+            "News calendar unavailable ("
+            + ", ".join(context["problems"])
+            + "). Check forexfactory.com manually before trading. "
+            "Do not assume there is no news. To update it, run: "
+            "python -m scripts.fetch_news_calendar"
+        )
+    elif context["in_blackout"]:
+        st.warning(
+            f"News blackout window active until "
+            f"{news_service.manila_text(context['blackout_window']['end'])} "
+            f"Manila time ({', '.join(context['blackout_window']['titles'])}). "
+            "Practice rule: avoid opening new trades now."
+        )
 
     st.button(
         "Save to journal",
